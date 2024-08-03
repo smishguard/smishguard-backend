@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 import requests
-import firebase_admin
-from firebase_admin import credentials, firestore
+#import firebase_admin
+#from firebase_admin import credentials, firestore
 import os
 from info_test import info_test
 
@@ -13,9 +13,9 @@ def ping():
     return jsonify({"message": "pong"})
 
 # Inicializar Firebase
-cred = credentials.Certificate(app.config['FIREBASE_CREDENTIALS'])
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+#cred = credentials.Certificate(app.config['FIREBASE_CREDENTIALS'])
+#firebase_admin.initialize_app(cred)
+#db = firestore.client()
 
 @app.route('/consumir_servicios', methods=['POST'])
 def consumir_servicios():
