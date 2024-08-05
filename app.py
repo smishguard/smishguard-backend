@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 
 app = Flask(__name__)
+application = app
 
 @app.route('/')
 def hello_world():
@@ -12,4 +13,4 @@ def ping():
 
 
 if __name__ == '__main__':
-    app.run(debug = True, port=4000)
+    app.run(debug = True)
