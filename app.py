@@ -16,7 +16,7 @@ def ping():
 #cred = credentials.Certificate(app.config['FIREBASE_CREDENTIALS'])
 #firebase_admin.initialize_app(cred)
 #db = firestore.client()
-
+'''
 @app.route('/consumir_servicios', methods=['POST'])
 def consumir_servicios():
     data = request.json
@@ -43,6 +43,7 @@ def consumir_twitter():
     }
     response = requests.get('https://api.twitter.com/2/tweets', headers=headers)
     return jsonify(response.json())
+'''
 '''
 @app.route("/info", methods=["GET"])
 def obtenerInfo():
