@@ -5,17 +5,10 @@ from model.MensajeSMS import MensajeSMS
 from model.Alerta import Alerta
 from model.Analisis import Analisis
 import json
-import os
 
 app = Flask(__name__)
 application = app
 client = OpenAI()
-
-# Ruta temporal para verificar la API key
-@app.route('/check-api-key')
-def check_api_key():
-    api_key = os.getenv('OPENAI_API_KEY')
-    return jsonify({"OPENAI_API_KEY": api_key})
 
 @app.route('/')
 def hello_world():
@@ -26,7 +19,7 @@ def ping():
     return jsonify({"message": "pong"})
 
 @app.route("/consultar-modelo", methods = ['POST'])
-async def consultar_modelo():
+def consultar_modelo():
     #mensajePrueba = MensajeSMS(1, "Prueba", datetime.now(), "+573107788388")
     analisisPrueba = Analisis(1, 1, 0.8, "otros detalles")
     #return jsonify({"Mensaje enviado": json.dumps(mensajePrueba.to_dict())})
