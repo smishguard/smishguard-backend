@@ -5,6 +5,7 @@ from model.MensajeSMS import MensajeSMS
 from model.Alerta import Alerta
 from model.Analisis import Analisis
 import json
+import os
 
 app = Flask(__name__)
 application = app
@@ -19,7 +20,7 @@ def ping():
     return jsonify({"message": "pong"})
 
 @app.route("/consultar-modelo", methods = ['POST'])
-def consultar_modelo():
+async def consultar_modelo():
     #mensajePrueba = MensajeSMS(1, "Prueba", datetime.now(), "+573107788388")
     analisisPrueba = Analisis(1, 1, 0.8, "otros detalles")
     #return jsonify({"Mensaje enviado": json.dumps(mensajePrueba.to_dict())})
