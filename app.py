@@ -5,6 +5,7 @@ from model.MensajeSMS import MensajeSMS
 from model.Alerta import Alerta
 from model.Analisis import Analisis
 import json
+import requests  # Importa la biblioteca requests para realizar solicitudes HTTP
 
 app = Flask(__name__)
 application = app
@@ -18,12 +19,8 @@ def hello_world():
 def ping():
     return jsonify({"message": "pong"})
 
-@app.route("/consultar-modelo", methods = ['POST'])
+@app.route("/consultar-modelo", methods=['POST'])
 def consultar_modelo():
-    #mensajePrueba = MensajeSMS(1, "Prueba", datetime.now(), "+573107788388")
-    analisisPrueba = Analisis(1, 1, 0.8, "otros detalles")
-    #return jsonify({"Mensaje enviado": json.dumps(mensajePrueba.to_dict())})
-
     # Obtener el objeto JSON enviado en el cuerpo de la solicitud
     data = request.get_json()
     mensaje = data.get('mensaje', '')
@@ -32,18 +29,35 @@ def consultar_modelo():
     response = client.chat.completions.create(
         model="gpt-3.5-turbo-0125",
         messages=[
-        {"role": "system", "content": "Eres un asistente de IA especializado en identificar mensajes de phishing. Proporciona una probabilidad entre 0 (no peligroso) y 1 (muy peligroso). Responde en el siguiente formato JSON: { \"Calificación\": [número], \"Descripción\": \"[breve explicación]\" }"},
-        {f"role": "user", "content": 'Evalúa este mensaje: "{mensaje}"'}
+            {"role": "system", "content": "Eres un asistente de IA especializado en identificar mensajes de phishing. Proporciona una probabilidad entre 0 (no peligroso) y 1 (muy peligroso). Responde en el siguiente formato JSON: { \"Calificación\": [número], \"Descripción\": \"[breve explicación]\" }"},
+            {"role": "user", "content": f'Evalúa este mensaje: "{mensaje}"'}
         ]
-    );   
-    
-    #return jsonify({"Analisis realizado": json.dumps(analisisPrueba.to_dict())})
+    )
 
     # Convertir la cadena JSON a un objeto Python
-    response_json = json.loads(response.choices[0].message.content)
+    response_json_openai = json.loads(response.choices[0].message.content)
+
+    # Enviar el mensaje al microservicio de detección de spam
+    url_microservicio = "https://microservicio-modelo-ml-spam.onrender.com/predict"
+    headers = {'Content-Type': 'application/json'}
+    payload = {"text": mensaje}
     
-    # Retornar el objeto JSON en la respuesta
-    return jsonify(response_json)
+    # Realizar la solicitud POST al microservicio
+    try:
+        response_microservicio = requests.post(url_microservicio, headers=headers, json=payload)
+        response_microservicio.raise_for_status()  # Lanza una excepción si la solicitud no fue exitosa
+        response_json_microservicio = response_microservicio.json()
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Error al contactar con el microservicio: {str(e)}"}), 500
+
+    # Combinar las respuestas de OpenAI y del microservicio
+    resultado_final = {
+        "analisis_openai": response_json_openai,
+        "analisis_microservicio": response_json_microservicio  # Contendrá solo {"prediction": "spam"} o {"prediction": "ham"}
+    }
+
+    # Retornar el objeto JSON combinado en la respuesta
+    return jsonify(resultado_final)
 
 @app.route("/publicar-tweet")
 def publicar_tweet():
