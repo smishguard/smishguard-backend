@@ -6,6 +6,7 @@ from model.Alerta import Alerta
 from model.Analisis import Analisis
 import json
 import requests  # Importa la biblioteca requests para realizar solicitudes HTTP
+import re
 
 app = Flask(__name__)
 application = app
@@ -50,10 +51,30 @@ def consultar_modelo():
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"Error al contactar con el microservicio: {str(e)}"}), 500
 
+    
+
+    urls = re.findall(r'(?:https?://)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?', mensaje)
+    if urls.length > 0:
+        # Enviar el mensaje al microservicio de detección urls de VT
+        url_microservicio_vt = "https://microservicio-virustotal.onrender.com/analyze-url"
+        headers_vt = {'Content-Type': 'application/json'}
+        payload_vt = {"url": urls[0]}
+
+            # Realizar la solicitud POST al microservicio VT
+        try:
+            response_microservicio_vt = requests.post(url_microservicio_vt, headers=headers_vt, json=payload_vt)
+            response_microservicio_vt.raise_for_status()  # Lanza una excepción si la solicitud no fue exitosa
+            response_json_microservicio_vt = response_microservicio_vt.json()
+        except requests.exceptions.RequestException as e:
+            return jsonify({"error": f"Error al contactar con el microservicio: {str(e)}"}), 500
+    else:
+        response_json_microservicio_vt = {"error": "No se encontraron URLs en el mensaje"}
+    
     # Combinar las respuestas de OpenAI y del microservicio
     resultado_final = {
         "analisis_openai": response_json_openai,
-        "analisis_microservicio": response_json_microservicio  # Contendrá solo {"prediction": "spam"} o {"prediction": "ham"}
+        "analisis_microservicio": response_json_microservicio,  # Contendrá solo {"prediction": "spam"} o {"prediction": "ham"}
+        "analisis_microservicio_vt": response_json_microservicio_vt
     }
 
     # Retornar el objeto JSON combinado en la respuesta
