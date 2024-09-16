@@ -8,5 +8,4 @@ MarkupSafe==2.1.5
 werkzeug==3.0.2
 zipp==3.18.1
 gunicorn
-openai==1.42.0
 requests

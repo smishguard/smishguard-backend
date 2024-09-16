@@ -1,5 +1,4 @@
 from flask import Flask, jsonify, request
-from openai import OpenAI
 from datetime import datetime
 from model.MensajeSMS import MensajeSMS
 from model.Alerta import Alerta
@@ -10,7 +9,6 @@ import re
 
 app = Flask(__name__)
 application = app
-client = OpenAI()
 
 @app.route('/')
 def hello_world():
@@ -26,17 +24,18 @@ def consultar_modelo():
     data = request.get_json()
     mensaje = data.get('mensaje', '')
 
-    # Realizar la solicitud a la API de OpenAI
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo-0125",
-        messages=[
-            {"role": "system", "content": "Eres un asistente de IA especializado en identificar mensajes de phishing. Proporciona una probabilidad entre 0 (no peligroso) y 1 (muy peligroso). Responde en el siguiente formato JSON: { \"Calificación\": [número], \"Descripción\": \"[breve explicación]\" }"},
-            {"role": "user", "content": f'Evalúa este mensaje: "{mensaje}"'}
-        ]
-    )
-
-    # Convertir la cadena JSON a un objeto Python
-    response_json_openai = json.loads(response.choices[0].message.content)
+    # Enviar el mensaje al microservicio de gpt
+    url_microservicio_gpt = "https://smishguard-chatgpt-ms.onrender.com/consultar-modelo-gpt"
+    headers_gpt = {'Content-Type': 'application/json'}
+    payload_gpt = {"mensaje": mensaje}
+    
+    # Realizar la solicitud POST al microservicio
+    try:
+        response_microservicio_gpt = requests.post(url_microservicio_gpt, headers=headers_gpt, json=payload_gpt)
+        response_microservicio_gpt.raise_for_status()  # Lanza una excepción si la solicitud no fue exitosa
+        response_json_microservicio_gpt = response_microservicio_gpt.json()
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Error al contactar con el microservicio: {str(e)}"}), 500    
 
     # Enviar el mensaje al microservicio de detección de spam
     url_microservicio = "https://microservicio-modelo-ml-spam.onrender.com/predict"
@@ -52,7 +51,6 @@ def consultar_modelo():
         return jsonify({"error": f"Error al contactar con el microservicio: {str(e)}"}), 500
 
     
-
     urls = re.findall(r'(?:https?://)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?', mensaje)
     if len(urls) > 0:
         # Enviar el mensaje al microservicio de detección urls de VT
@@ -73,7 +71,7 @@ def consultar_modelo():
     
     # Combinar las respuestas de OpenAI y del microservicio
     resultado_final = {
-        "analisis_openai": response_json_openai,
+        "analisis_openai": response_json_microservicio_gpt,
         "analisis_microservicio": response_json_microservicio,  # Contendrá solo {"prediction": "spam"} o {"prediction": "ham"}
         "analisis_microservicio_vt": response_json_microservicio_vt
     }
