@@ -54,7 +54,7 @@ def consultar_modelo():
     
 
     urls = re.findall(r'(?:https?://)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?', mensaje)
-    if urls.length > 0:
+    if len(urls) > 0:
         # Enviar el mensaje al microservicio de detección urls de VT
         url_microservicio_vt = "https://microservicio-virustotal.onrender.com/analyze-url"
         headers_vt = {'Content-Type': 'application/json'}
