@@ -10,4 +10,3 @@ zipp==3.18.1
 gunicorn
 openai==1.42.0
 requests
-re
