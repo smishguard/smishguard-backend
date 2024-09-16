@@ -65,6 +65,7 @@ def consultar_modelo():
             response_microservicio_vt = requests.post(url_microservicio_vt, headers=headers_vt, json=payload_vt)
             response_microservicio_vt.raise_for_status()  # Lanza una excepción si la solicitud no fue exitosa
             response_json_microservicio_vt = response_microservicio_vt.json()
+            response_json_microservicio_vt['url'] = urls[0] if len(urls) > 0 else "No se encontraron URLs en el mensaje"
         except requests.exceptions.RequestException as e:
             return jsonify({"error": f"Error al contactar con el microservicio: {str(e)}"}), 500
     else:
@@ -74,8 +75,7 @@ def consultar_modelo():
     resultado_final = {
         "analisis_openai": response_json_openai,
         "analisis_microservicio": response_json_microservicio,  # Contendrá solo {"prediction": "spam"} o {"prediction": "ham"}
-        "analisis_microservicio_vt": response_json_microservicio_vt,
-        "url": urls[0] if len(urls) > 0 else "No se encontraron URLs en el mensaje"
+        "analisis_microservicio_vt": response_json_microservicio_vt
     }
 
     # Retornar el objeto JSON combinado en la respuesta
