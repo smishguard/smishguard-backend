@@ -74,7 +74,8 @@ def consultar_modelo():
     resultado_final = {
         "analisis_openai": response_json_openai,
         "analisis_microservicio": response_json_microservicio,  # Contendrá solo {"prediction": "spam"} o {"prediction": "ham"}
-        "analisis_microservicio_vt": response_json_microservicio_vt
+        "analisis_microservicio_vt": response_json_microservicio_vt,
+        "url": urls[0] if len(urls) > 0 else "No se encontraron URLs en el mensaje"
     }
 
     # Retornar el objeto JSON combinado en la respuesta
