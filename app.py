@@ -38,7 +38,7 @@ def consultar_modelo():
         response_json_microservicio_gpt = "Error al contactar con el microservicio"
 
     # Enviar el mensaje al microservicio de detección de spam
-    url_microservicio = "https://microservicio-modelo-ml-spam.onrender.com/predict"
+    url_microservicio = "https://smishguard-modeloml-ms.onrender.com/predict"
     headers = {'Content-Type': 'application/json'}
     payload = {"text": mensaje}
     
@@ -54,7 +54,7 @@ def consultar_modelo():
     urls = re.findall(r'(?:https?://)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?', mensaje)
     if len(urls) > 0:
         # Enviar el mensaje al microservicio de detección urls de VT
-        url_microservicio_vt = "https://microservicio-virustotal.onrender.com/analyze-url"
+        url_microservicio_vt = "https://smishguard-virustotal-ms.onrender.com/analyze-url"
         headers_vt = {'Content-Type': 'application/json'}
         payload_vt = {"url": urls[0]}
 
