@@ -6,6 +6,8 @@ from model.Analisis import Analisis
 import json
 import requests  # Importa la biblioteca requests para realizar solicitudes HTTP
 import re
+import aiohttp  # Para hacer las solicitudes HTTP de manera asíncrona
+import asyncio  # Para manejar las tareas asíncronas
 
 app = Flask(__name__)
 application = app
@@ -19,60 +21,75 @@ def ping():
     return jsonify({"message": "pong"})
 
 @app.route("/consultar-modelo", methods=['POST'])
-def consultar_modelo():
-    # Obtener el objeto JSON enviado en el cuerpo de la solicitud
+async def consultar_modelo():
     data = request.get_json()
     mensaje = data.get('mensaje', '')
 
-    # Enviar el mensaje al microservicio de gpt
+    # URLs de los microservicios
     url_microservicio_gpt = "https://smishguard-chatgpt-ms.onrender.com/consultar-modelo-gpt"
-    headers_gpt = {'Content-Type': 'application/json'}
-    payload_gpt = {"mensaje": mensaje}
-    
-    # Realizar la solicitud POST al microservicio
-    try:
-        response_microservicio_gpt = requests.post(url_microservicio_gpt, headers=headers_gpt, json=payload_gpt)
-        response_microservicio_gpt.raise_for_status()  # Lanza una excepción si la solicitud no fue exitosa
-        response_json_microservicio_gpt = response_microservicio_gpt.json()
-    except requests.exceptions.RequestException as e:
-        response_json_microservicio_gpt = "Error al contactar con el microservicio"
-
-    # Enviar el mensaje al microservicio de detección de spam
     url_microservicio = "https://smishguard-modeloml-ms.onrender.com/predict"
+    url_microservicio_vt = "https://smishguard-virustotal-ms.onrender.com/analyze-url"
+
     headers = {'Content-Type': 'application/json'}
+    payload_gpt = {"mensaje": mensaje}
     payload = {"text": mensaje}
-    
-    # Realizar la solicitud POST al microservicio
-    try:
-        response_microservicio = requests.post(url_microservicio, headers=headers, json=payload)
-        response_microservicio.raise_for_status()  # Lanza una excepción si la solicitud no fue exitosa
-        response_json_microservicio = response_microservicio.json()
-    except requests.exceptions.RequestException as e:
-        response_json_microservicio = "Error al contactar con el microservicio"
 
-    
+    # Detectar URLs en el mensaje
     urls = re.findall(r'(?:https?://)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?', mensaje)
-    if len(urls) > 0:
-        # Enviar el mensaje al microservicio de detección urls de VT
-        url_microservicio_vt = "https://smishguard-virustotal-ms.onrender.com/analyze-url"
-        headers_vt = {'Content-Type': 'application/json'}
-        payload_vt = {"url": urls[0]}
+    payload_vt = {"url": urls[0]} if urls else {}
 
-            # Realizar la solicitud POST al microservicio VT
-        try:
-            response_microservicio_vt = requests.post(url_microservicio_vt, headers=headers_vt, json=payload_vt)
-            response_microservicio_vt.raise_for_status()  # Lanza una excepción si la solicitud no fue exitosa
-            response_json_microservicio_vt = response_microservicio_vt.json()
-            response_json_microservicio_vt['url'] = urls[0] if len(urls) > 0 else "No se encontraron URLs en el mensaje"
-        except requests.exceptions.RequestException as e:
-            response_json_microservicio_vt = "Error al contactar con el microservicio"
-    else:
-        response_json_microservicio_vt = {"Error No se encontraron URLs en el mensaje"}
-    
-    # Combinar las respuestas de OpenAI y del microservicio
+    # Timeout en segundos
+    timeout_duration = 15
+
+    # Hacemos las solicitudes de manera asíncrona
+    async with aiohttp.ClientSession() as session:
+
+        # Definir las tareas asíncronas con timeout
+        async def consultar_gpt():
+            try:
+                async with session.post(url_microservicio_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
+                    return await response.json()
+            except asyncio.TimeoutError:
+                return "La solicitud al microservicio GPT demoró más de 15 segundos"
+            except aiohttp.ClientError as e:
+                return "Error al contactar con el microservicio GPT"
+
+        async def consultar_spam():
+            try:
+                async with session.post(url_microservicio, headers=headers, json=payload, timeout=timeout_duration) as response:
+                    return await response.json()
+            except asyncio.TimeoutError:
+                return "La solicitud al microservicio de detección de spam demoró más de 15 segundos"
+            except aiohttp.ClientError as e:
+                return "Error al contactar con el microservicio de detección de spam"
+
+        async def consultar_virustotal():
+            if not urls:
+                return {"Error": "No se encontraron URLs en el mensaje"}
+            try:
+                async with session.post(url_microservicio_vt, headers=headers, json=payload_vt, timeout=timeout_duration+30) as response:
+                    vt_response = await response.json()
+                    vt_response['url'] = urls[0]
+                    return vt_response
+            except asyncio.TimeoutError:
+                return "La solicitud al microservicio VirusTotal demoró más de 45 segundos"
+            except aiohttp.ClientError as e:
+                return "Error al contactar con el microservicio de VirusTotal"
+
+        # Ejecutamos las tareas en paralelo
+        gpt_task = consultar_gpt()
+        spam_task = consultar_spam()
+        vt_task = consultar_virustotal()
+
+        # Esperamos a que todas las tareas terminen
+        response_json_microservicio_gpt, response_json_microservicio, response_json_microservicio_vt = await asyncio.gather(
+            gpt_task, spam_task, vt_task
+        )
+
+    # Combinar las respuestas de los microservicios
     resultado_final = {
         "analisis_openai": response_json_microservicio_gpt,
-        "analisis_microservicio": response_json_microservicio,  # Contendrá solo {"prediction": "spam"} o {"prediction": "ham"}
+        "analisis_microservicio": response_json_microservicio,
         "analisis_microservicio_vt": response_json_microservicio_vt
     }
 
