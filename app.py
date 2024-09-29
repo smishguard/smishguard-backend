@@ -35,7 +35,7 @@ def consultar_modelo():
         response_microservicio_gpt.raise_for_status()  # Lanza una excepción si la solicitud no fue exitosa
         response_json_microservicio_gpt = response_microservicio_gpt.json()
     except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Error al contactar con el microservicio: {str(e)}"}), 500    
+        response_json_microservicio_gpt = "Error al contactar con el microservicio"
 
     # Enviar el mensaje al microservicio de detección de spam
     url_microservicio = "https://microservicio-modelo-ml-spam.onrender.com/predict"
@@ -48,7 +48,7 @@ def consultar_modelo():
         response_microservicio.raise_for_status()  # Lanza una excepción si la solicitud no fue exitosa
         response_json_microservicio = response_microservicio.json()
     except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Error al contactar con el microservicio: {str(e)}"}), 500
+        response_json_microservicio = "Error al contactar con el microservicio"
 
     
     urls = re.findall(r'(?:https?://)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?', mensaje)
@@ -65,9 +65,9 @@ def consultar_modelo():
             response_json_microservicio_vt = response_microservicio_vt.json()
             response_json_microservicio_vt['url'] = urls[0] if len(urls) > 0 else "No se encontraron URLs en el mensaje"
         except requests.exceptions.RequestException as e:
-            return jsonify({"error": f"Error al contactar con el microservicio: {str(e)}"}), 500
+            response_json_microservicio_vt = "Error al contactar con el microservicio"
     else:
-        response_json_microservicio_vt = {"error": "No se encontraron URLs en el mensaje"}
+        response_json_microservicio_vt = {"Error No se encontraron URLs en el mensaje"}
     
     # Combinar las respuestas de OpenAI y del microservicio
     resultado_final = {
