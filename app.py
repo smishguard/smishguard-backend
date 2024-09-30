@@ -96,10 +96,39 @@ async def consultar_modelo():
     # Retornar el objeto JSON combinado en la respuesta
     return jsonify(resultado_final)
 
-@app.route("/publicar-tweet")
+@app.route("/publicar-tweet", methods=['POST'])
 def publicar_tweet():
-    tweetPrueba = Alerta(1, "123 Tweet probando", datetime.now())
-    return jsonify({"Publicacion": json.dumps(tweetPrueba.to_dict())})
+    # Obtener el cuerpo de la solicitud
+    data = request.get_json()
+    mensaje = data.get('mensaje', '')
+
+    if not mensaje:
+        return jsonify({"error": "No se proporcionó un mensaje"}), 400
+
+    # URL del microservicio de Twitter
+    url_microservicio_twitter = "https://smishguard-twitter-ms.onrender.com/tweet"
+
+    # Configurar los headers y el payload
+    headers = {'Content-Type': 'application/json'}
+    payload = {"sms": mensaje}  # Asegurarse de que el campo coincide con lo que espera el microservicio
+
+    try:
+        # Hacer la solicitud POST al microservicio
+        response = requests.post(url_microservicio_twitter, headers=headers, json=payload)
+        response.raise_for_status()
+        
+        # Obtener la respuesta JSON del microservicio
+        result = response.json()
+        
+        # Retornar la respuesta exitosa con los datos recibidos del microservicio
+        return jsonify({
+            "mensaje": "Tweet publicado exitosamente",
+            "ResultadoTwitter": result
+        }), 200
+
+    except requests.exceptions.RequestException as e:
+        # Manejar los errores de la solicitud al microservicio
+        return jsonify({"mensaje": "Error al publicar el tweet", "ResultadoTwitter": str(e)}), 500
 
 @app.route("/base-datos")
 def base_datos():
