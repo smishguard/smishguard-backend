@@ -10,3 +10,4 @@ zipp==3.18.1
 gunicorn
 requests
 aiohttp
+flask-cors
