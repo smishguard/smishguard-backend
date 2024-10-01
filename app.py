@@ -65,7 +65,7 @@ async def consultar_modelo():
 
         async def consultar_virustotal():
             if not urls:
-                return {"Error": "No se encontraron URLs en el mensaje"}
+                return "No se encontraron URLs en el mensaje"
             try:
                 async with session.post(url_microservicio_vt, headers=headers, json=payload_vt, timeout=timeout_duration+30) as response:
                     vt_response = await response.json()
@@ -86,11 +86,42 @@ async def consultar_modelo():
             gpt_task, spam_task, vt_task
         )
 
+    # Ponderaciones
+    ponderacion_vt = 0.35
+    ponderacion_ml = 0.40
+    ponderacion_gpt = 0.25
+
+    # Valor numérico de VirusTotal (0 si no es malicioso, 1 si es malicioso)
+    if isinstance(response_json_microservicio_vt, dict) and 'malicious' in response_json_microservicio_vt:
+        valor_vt = 1 if response_json_microservicio_vt['malicious'] else 0
+    else:
+        valor_vt = 0  # Si no se puede determinar, asumimos no malicioso
+
+    # Valor numérico de Machine Learning (0 si 'not spam', 1 si 'spam')
+    if isinstance(response_json_microservicio, dict) and 'prediction' in response_json_microservicio:
+        valor_ml = 1 if response_json_microservicio['prediction'] == 'spam' else 0
+    else:
+        valor_ml = 0  # Si no se puede determinar, asumimos no spam
+
+    # Valor numérico de GPT (valor entre 0 y 1)
+    if isinstance(response_json_microservicio_gpt, dict) and 'score' in response_json_microservicio_gpt:
+        valor_gpt = response_json_microservicio_gpt['score']
+    else:
+        valor_gpt = 0  # Si no se puede determinar, asumimos 0
+
+    # Calcular el puntaje ponderado
+    puntaje_total = (valor_vt * ponderacion_vt) + (valor_ml * ponderacion_ml) + (valor_gpt * ponderacion_gpt)
+
+    # Escalar el puntaje a una escala de 1 a 10
+    puntaje_escalado = 1 + (puntaje_total * 9)
+
     # Combinar las respuestas de los microservicios
     resultado_final = {
         "analisis_openai": response_json_microservicio_gpt,
-        "analisis_microservicio": response_json_microservicio,
-        "analisis_microservicio_vt": response_json_microservicio_vt
+        "analisis_microservicio": response_json_microservicio,  # Contendrá solo {"prediction": "spam"} o {"prediction": "ham"}
+        "analisis_microservicio_vt": response_json_microservicio_vt,
+        "puntaje_total": puntaje_total,
+        "puntaje_escalado": puntaje_escalado
     }
 
     # Retornar el objeto JSON combinado en la respuesta
