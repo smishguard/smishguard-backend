@@ -92,8 +92,8 @@ async def consultar_modelo():
     ponderacion_gpt = 0.25
 
     # Valor numérico de VirusTotal (0 si no es malicioso, 1 si es malicioso)
-    if isinstance(response_json_microservicio_vt, dict) and 'malicious' in response_json_microservicio_vt:
-        valor_vt = 1 if response_json_microservicio_vt['malicious'] else 0
+    if isinstance(response_json_microservicio_vt, dict) and 'overall_result' in response_json_microservicio_vt:
+        valor_vt = 1 if response_json_microservicio_vt['overall_result'] == "POSITIVO: ES MALICIOSO" else 0
     else:
         valor_vt = 0  # Si no se puede determinar, asumimos no malicioso
 
@@ -103,9 +103,9 @@ async def consultar_modelo():
     else:
         valor_ml = 0  # Si no se puede determinar, asumimos no spam
 
-    # Valor numérico de GPT (valor entre 0 y 1)
-    if isinstance(response_json_microservicio_gpt, dict) and 'score' in response_json_microservicio_gpt:
-        valor_gpt = response_json_microservicio_gpt['score']
+    # Valor numérico de GPT (valor entre 0 y 1) con un decimal
+    if isinstance(response_json_microservicio_gpt, dict) and 'Calificación' in response_json_microservicio_gpt:
+        valor_gpt = response_json_microservicio_gpt['Calificación']
     else:
         valor_gpt = 0  # Si no se puede determinar, asumimos 0
 
@@ -113,15 +113,24 @@ async def consultar_modelo():
     puntaje_total = (valor_vt * ponderacion_vt) + (valor_ml * ponderacion_ml) + (valor_gpt * ponderacion_gpt)
 
     # Escalar el puntaje a una escala de 1 a 10
-    puntaje_escalado = 1 + (puntaje_total * 9)
+    puntaje_escalado = round(1 + (puntaje_total * 9), 1)
 
-    # Combinar las respuestas de los microservicios
+    # Crear la variable analisis_smishguard según el puntaje_escalado
+    if puntaje_escalado >= 1 and puntaje_escalado <= 3:
+        analisis_smishguard = "Seguro"
+    elif puntaje_escalado >= 4 and puntaje_escalado <= 7:
+        analisis_smishguard = "Sospechoso"
+    elif puntaje_escalado >= 8 and puntaje_escalado <= 10:
+        analisis_smishguard = "Peligroso"
+    else:
+        analisis_smishguard = "Indeterminado"  # Por si el puntaje queda fuera del rango esperado
+
     resultado_final = {
-        "analisis_openai": response_json_microservicio_gpt,
-        "analisis_microservicio": response_json_microservicio,  # Contendrá solo {"prediction": "spam"} o {"prediction": "ham"}
-        "analisis_microservicio_vt": response_json_microservicio_vt,
-        "puntaje_total": puntaje_total,
-        "puntaje_escalado": puntaje_escalado
+        "mensaje_analizado": mensaje,
+        "enlace": response_json_microservicio_vt.get('url', 'No se encontraron enlaces'),
+        "analisis_gpt": response_json_microservicio_gpt.get('Descripción', 'No disponible'),
+        "puntaje": puntaje_escalado,
+        "analisis_smishguard": analisis_smishguard
     }
 
     # Retornar el objeto JSON combinado en la respuesta
