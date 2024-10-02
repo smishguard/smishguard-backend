@@ -113,7 +113,7 @@ async def consultar_modelo():
     puntaje_total = (valor_vt * ponderacion_vt) + (valor_ml * ponderacion_ml) + (valor_gpt * ponderacion_gpt)
 
     # Escalar el puntaje a una escala de 1 a 10
-    puntaje_escalado = round(1 + (puntaje_total * 9), 1)
+    puntaje_escalado = round(1 + (puntaje_total * 9))
 
     # Crear la variable analisis_smishguard según el puntaje_escalado
     if puntaje_escalado >= 1 and puntaje_escalado <= 3:
