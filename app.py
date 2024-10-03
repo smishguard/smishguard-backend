@@ -91,8 +91,10 @@ async def consultar_modelo():
     # Valor numérico de VirusTotal (0 si no es malicioso, 1 si es malicioso)
     if isinstance(response_json_microservicio_vt, dict) and 'overall_result' in response_json_microservicio_vt:
         valor_vt = 1 if response_json_microservicio_vt['overall_result'] == "POSITIVO: ES MALICIOSO" else 0
+        enlace_retornado_vt = response_json_microservicio_vt['url']
     else:
         valor_vt = 0  # Si no se puede determinar, asumimos no malicioso
+        enlace_retornado_vt = response_json_microservicio_vt
 
     # Valor numérico de Machine Learning (0 si 'not spam', 1 si 'spam')
     if isinstance(response_json_microservicio, dict) and 'prediction' in response_json_microservicio:
@@ -103,8 +105,10 @@ async def consultar_modelo():
     # Valor numérico de GPT (valor entre 0 y 1) con un decimal
     if isinstance(response_json_microservicio_gpt, dict) and 'Calificación' in response_json_microservicio_gpt:
         valor_gpt = response_json_microservicio_gpt['Calificación']
+        analisis_gpt = response_json_microservicio_gpt['Descripción']
     else:
         valor_gpt = 0  # Si no se puede determinar, asumimos 0
+        analisis_gpt = response_json_microservicio_gpt
 
     # Calcular el puntaje ponderado
     puntaje_total = (valor_vt * ponderacion_vt) + (valor_ml * ponderacion_ml) + (valor_gpt * ponderacion_gpt)
@@ -124,8 +128,8 @@ async def consultar_modelo():
 
     resultado_final = {
         "mensaje_analizado": mensaje,
-        "enlace": response_json_microservicio_vt.get('url', 'No se encontraron enlaces'),
-        "analisis_gpt": response_json_microservicio_gpt.get('Descripción', 'No disponible'),
+        "enlace": enlace_retornado_vt,
+        "analisis_gpt": analisis_gpt,
         "puntaje": puntaje_escalado,
         "analisis_smishguard": analisis_smishguard
     }
