@@ -1,15 +1,15 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS  # Importa el paquete CORS
 from datetime import datetime
-from model.MensajeSMS import MensajeSMS
-from model.Alerta import Alerta
-from model.Analisis import Analisis
 import json
-import requests  # Importa la biblioteca requests para realizar solicitudes HTTP
+import requests
 import re
-import aiohttp  # Para hacer las solicitudes HTTP de manera asíncrona
-import asyncio  # Para manejar las tareas asíncronas
+import aiohttp
+import asyncio
 
 app = Flask(__name__)
+CORS(app)  # Habilitar CORS para todas las rutas
+
 application = app
 
 @app.route('/')
@@ -41,10 +41,8 @@ async def consultar_modelo():
     # Timeout en segundos
     timeout_duration = 15
 
-    # Hacemos las solicitudes de manera asíncrona
     async with aiohttp.ClientSession() as session:
 
-        # Definir las tareas asíncronas con timeout
         async def consultar_gpt():
             try:
                 async with session.post(url_microservicio_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
@@ -76,15 +74,14 @@ async def consultar_modelo():
             except aiohttp.ClientError as e:
                 return "Error al contactar con el microservicio de VirusTotal"
 
-        # Ejecutamos las tareas en paralelo
         gpt_task = consultar_gpt()
         spam_task = consultar_spam()
         vt_task = consultar_virustotal()
 
-        # Esperamos a que todas las tareas terminen
         response_json_microservicio_gpt, response_json_microservicio, response_json_microservicio_vt = await asyncio.gather(
             gpt_task, spam_task, vt_task
         )
+
 
     # Ponderaciones
     ponderacion_vt = 0.35
@@ -137,41 +134,30 @@ async def consultar_modelo():
         "analisis_smishguard": analisis_smishguard
     }
 
-    # Retornar el objeto JSON combinado en la respuesta
     return jsonify(resultado_final)
 
 @app.route("/publicar-tweet", methods=['POST'])
 def publicar_tweet():
-    # Obtener el cuerpo de la solicitud
     data = request.get_json()
     mensaje = data.get('mensaje', '')
 
     if not mensaje:
         return jsonify({"error": "No se proporcionó un mensaje"}), 400
 
-    # URL del microservicio de Twitter
     url_microservicio_twitter = "https://smishguard-twitter-ms.onrender.com/tweet"
-
-    # Configurar los headers y el payload
     headers = {'Content-Type': 'application/json'}
-    payload = {"sms": mensaje}  # Asegurarse de que el campo coincide con lo que espera el microservicio
+    payload = {"sms": mensaje}
 
     try:
-        # Hacer la solicitud POST al microservicio
         response = requests.post(url_microservicio_twitter, headers=headers, json=payload)
         response.raise_for_status()
-        
-        # Obtener la respuesta JSON del microservicio
         result = response.json()
-        
-        # Retornar la respuesta exitosa con los datos recibidos del microservicio
         return jsonify({
             "mensaje": "Tweet publicado exitosamente",
             "ResultadoTwitter": result
         }), 200
 
     except requests.exceptions.RequestException as e:
-        # Manejar los errores de la solicitud al microservicio
         return jsonify({"mensaje": "Error al publicar el tweet", "ResultadoTwitter": str(e)}), 500
 
 @app.route("/base-datos")
@@ -179,4 +165,4 @@ def base_datos():
     return jsonify({"message": "pong"})
 
 if __name__ == '__main__':
-    app.run(debug = True)
+    app.run(debug=True)
