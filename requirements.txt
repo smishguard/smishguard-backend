@@ -11,3 +11,5 @@ gunicorn
 requests
 aiohttp
 flask-cors
+pymongo[srv]
+python-dotenv

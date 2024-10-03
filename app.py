@@ -1,16 +1,30 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS  # Importa el paquete CORS
-from datetime import datetime
-import json
+from pymongo import MongoClient
+from bson import ObjectId 
+from dotenv import load_dotenv
 import requests
 import re
 import aiohttp
 import asyncio
+import os
 
 app = Flask(__name__)
 CORS(app)  # Habilitar CORS para todas las rutas
 
 application = app
+
+# Cargar las variables de entorno desde el archivo .env
+load_dotenv()
+
+# URI de MongoDB Atlas
+MONGO_URI = f"mongodb+srv://{os.getenv("MONGO_USERNAME")}:{os.getenv("DB_PASSWORD")}@clustermain.pagaw.mongodb.net/?retryWrites=true&w=majority&appName=ClusterMain"
+
+# Conexión al cliente MongoDB Atlas
+client = MongoClient(MONGO_URI)
+
+# Seleccionar la base de datos
+db = client[os.getenv("MONGO_DBNAME")]
 
 @app.route('/')
 def hello_world():
@@ -160,9 +174,33 @@ def publicar_tweet():
     except requests.exceptions.RequestException as e:
         return jsonify({"mensaje": "Error al publicar el tweet", "ResultadoTwitter": str(e)}), 500
 
+# Función para convertir ObjectId a string en todos los documentos
+def parse_json(doc):
+    """
+    Convierte los ObjectId en los documentos a strings para que sean serializables en JSON.
+    """
+    for key, value in doc.items():
+        if isinstance(value, ObjectId):
+            doc[key] = str(value)  # Convertir ObjectId a string
+    return doc
+
 @app.route("/base-datos")
 def base_datos():
-    return jsonify({"message": "pong"})
+    try:
+        # Seleccionar la colección dentro de la base de datos
+        collection = db['Mensaje']
+
+        # Realizar una operación en la base de datos (ejemplo: encontrar todos los documentos)
+        documentos = collection.find()
+        
+        # Convertir los documentos a una lista de diccionarios, y convertir ObjectId a string
+        documentos_list = [parse_json(doc) for doc in documentos]
+
+        # Devolver los documentos en formato JSON
+        return jsonify({"documentos": documentos_list})
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
     app.run(debug=True)
