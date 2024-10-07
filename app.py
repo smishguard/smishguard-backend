@@ -18,7 +18,7 @@ application = app
 load_dotenv()
 
 # URI de MongoDB Atlas
-MONGO_URI = f"mongodb+srv://{os.getenv("MONGO_USERNAME")}:{os.getenv("DB_PASSWORD")}@clustermain.pagaw.mongodb.net/?retryWrites=true&w=majority&appName=ClusterMain"
+MONGO_URI = f"mongodb+srv://{os.getenv('MONGO_USERNAME')}:{os.getenv('DB_PASSWORD')}@clustermain.pagaw.mongodb.net/?retryWrites=true&w=majority&appName=ClusterMain"
 
 # Conexión al cliente MongoDB Atlas
 client = MongoClient(MONGO_URI)
@@ -150,7 +150,7 @@ async def consultar_modelo():
 
     return jsonify(resultado_final)
 
-@app.route("/publicar-tweet", methods=['POST'])
+'''@app.route("/publicar-tweet", methods=['POST'])
 def publicar_tweet():
     data = request.get_json()
     mensaje = data.get('mensaje', '')
@@ -182,7 +182,7 @@ def parse_json(doc):
     for key, value in doc.items():
         if isinstance(value, ObjectId):
             doc[key] = str(value)  # Convertir ObjectId a string
-    return doc
+    return doc'''
 
 @app.route("/base-datos")
 def base_datos():
