@@ -8,6 +8,7 @@ import re
 import aiohttp
 import asyncio
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)  # Habilitar CORS para todas las rutas
@@ -39,6 +40,17 @@ async def consultar_modelo():
     data = request.get_json()
     mensaje = data.get('mensaje', '')
 
+    # Conexión a la colección Mensaje
+    collection = db['Mensaje']
+    
+    # Buscar el mensaje en la base de datos
+    mensaje_encontrado = collection.find_one({"contenido": mensaje})
+
+    if mensaje_encontrado:
+        # Si el mensaje ya existe en la base de datos, devolver el análisis almacenado
+        return jsonify(mensaje_encontrado['analisis'])
+
+    # Si el mensaje no existe en la base de datos, realizar el análisis
     # URLs de los microservicios
     url_microservicio_gpt = "https://smishguard-chatgpt-ms.onrender.com/consultar-modelo-gpt"
     url_microservicio = "https://smishguard-modeloml-ms.onrender.com/predict"
@@ -96,7 +108,6 @@ async def consultar_modelo():
             gpt_task, spam_task, vt_task
         )
 
-
     # Ponderaciones
     ponderacion_vt = 0.35
     ponderacion_ml = 0.40
@@ -148,32 +159,26 @@ async def consultar_modelo():
         "analisis_smishguard": analisis_smishguard
     }
 
+    # Almacenar el análisis en la base de datos
+    nuevo_documento = {
+        "contenido": mensaje,
+        "url": enlace_retornado_vt,
+        "analisis": {
+            "calificacion_gpt": valor_gpt,
+            "calificacion_ml": valor_ml,
+            "ponderado": puntaje_escalado,
+            "nivel_peligro": analisis_smishguard,
+            "calificacion_vt": valor_vt,
+            "justificacion_gpt": analisis_gpt,
+            "fecha_analisis": datetime.utcnow().isoformat() + 'Z'  # ISO 8601 con zona horaria Z
+        }
+    }
+
+    # Insertar el nuevo documento en la base de datos
+    collection.insert_one(nuevo_documento)
+
     return jsonify(resultado_final)
 
-'''@app.route("/publicar-tweet", methods=['POST'])
-def publicar_tweet():
-    data = request.get_json()
-    mensaje = data.get('mensaje', '')
-
-    if not mensaje:
-        return jsonify({"error": "No se proporcionó un mensaje"}), 400
-
-    url_microservicio_twitter = "https://smishguard-twitter-ms.onrender.com/tweet"
-    headers = {'Content-Type': 'application/json'}
-    payload = {"sms": mensaje}
-
-    try:
-        response = requests.post(url_microservicio_twitter, headers=headers, json=payload)
-        response.raise_for_status()
-        result = response.json()
-        return jsonify({
-            "mensaje": "Tweet publicado exitosamente",
-            "ResultadoTwitter": result
-        }), 200
-
-    except requests.exceptions.RequestException as e:
-        return jsonify({"mensaje": "Error al publicar el tweet", "ResultadoTwitter": str(e)}), 500
-'''
 # Función para convertir ObjectId a string en todos los documentos
 def parse_json(doc):
     """
