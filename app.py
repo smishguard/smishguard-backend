@@ -173,7 +173,7 @@ def publicar_tweet():
 
     except requests.exceptions.RequestException as e:
         return jsonify({"mensaje": "Error al publicar el tweet", "ResultadoTwitter": str(e)}), 500
-
+'''
 # Función para convertir ObjectId a string en todos los documentos
 def parse_json(doc):
     """
@@ -182,7 +182,7 @@ def parse_json(doc):
     for key, value in doc.items():
         if isinstance(value, ObjectId):
             doc[key] = str(value)  # Convertir ObjectId a string
-    return doc'''
+    return doc
 
 @app.route("/base-datos")
 def base_datos():
