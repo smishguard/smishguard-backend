@@ -206,6 +206,99 @@ def base_datos():
 
     except Exception as e:
         return jsonify({"error": str(e)})
+    
+'''@app.route("/publicar-tweet", methods=['POST'])
+def publicar_tweet():
+    data = request.get_json()
+    mensaje = data.get('mensaje', '')
+
+    if not mensaje:
+        return jsonify({"error": "No se proporcionó un mensaje"}), 400
+
+    url_microservicio_twitter = "https://smishguard-twitter-ms.onrender.com/tweet"
+    headers = {'Content-Type': 'application/json'}
+    payload = {"sms": mensaje}
+
+    try:
+        response = requests.post(url_microservicio_twitter, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        return jsonify({
+            "mensaje": "Tweet publicado exitosamente",
+            "ResultadoTwitter": result
+        }), 200
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({"mensaje": "Error al publicar el tweet", "ResultadoTwitter": str(e)}), 500
+'''
+@app.route("/mensajes-reportados", methods=['GET'])
+def mensajes_reportados():
+    try:
+        # Seleccionar la colección MensajesReportados
+        collection = db['MensajesReportados']
+
+        # Realizar una operación en la base de datos (ejemplo: encontrar todos los documentos)
+        documentos = collection.find()
+        
+        # Convertir los documentos a una lista de diccionarios, y convertir ObjectId a string
+        documentos_list = [parse_json(doc) for doc in documentos]
+
+        # Devolver los documentos en formato JSON
+        return jsonify({"documentos": documentos_list})
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    
+@app.route("/guardar-mensaje-reportado", methods=['POST'])
+def guardar_mensaje_reportado():
+    try:
+        # Obtener los datos enviados en la solicitud
+        data = request.get_json()
+
+        # Validar que los campos requeridos estén presentes
+        contenido = data.get('contenido', '')
+        url = data.get('url', '')
+        analisis = data.get('analisis', {})
+        publicado = data.get('publicado', False)  # Valor por defecto es False
+
+        if not contenido or not url or not analisis:
+            return jsonify({"error": "Faltan campos requeridos (contenido, url o analisis)."}), 400
+
+        # Conexión a la colección MensajesReportados
+        collection = db['MensajesReportados']
+
+        # Verificar si ya existe un mensaje con el mismo contenido
+        mensaje_existente = collection.find_one({"contenido": contenido})
+
+        if mensaje_existente:
+            # Si ya existe, devolver un mensaje indicando que ya fue reportado
+            return jsonify({"mensaje": "El mensaje ya fue reportado previamente.", "documento": parse_json(mensaje_existente)}), 200
+
+        # Crear el documento para insertar
+        nuevo_documento = {
+            "contenido": contenido,
+            "url": url,
+            "publicado": publicado,  # Agregar el campo "publicado"
+            "analisis": {
+                "calificacion_gpt": analisis.get('calificacion_gpt', 0),
+                "calificacion_ml": analisis.get('calificacion_ml', False),
+                "ponderado": analisis.get('ponderado', 0),
+                "nivel_peligro": analisis.get('nivel_peligro', "Indeterminado"),
+                "calificacion_vt": analisis.get('calificacion_vt', False),
+                "justificacion_gpt": analisis.get('justificacion_gpt', ""),
+                "fecha_analisis": analisis.get('fecha_analisis', datetime.utcnow().isoformat() + 'Z')  # Usar fecha actual si no se provee
+            }
+        }
+
+        # Insertar el nuevo documento en la base de datos
+        collection.insert_one(nuevo_documento)
+
+        return jsonify({"mensaje": "El mensaje reportado se ha guardado exitosamente."}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
