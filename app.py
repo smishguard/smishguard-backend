@@ -159,7 +159,7 @@ async def consultar_modelo():
         "analisis_smishguard": analisis_smishguard
     }
 
-    # Almacenar el análisis en la base de datos
+    # Almacenar el análisis en la base de datos solo si no existe previamente (esto ya no es necesario porque ya comprobamos antes)
     nuevo_documento = {
         "contenido": mensaje,
         "url": enlace_retornado_vt,
@@ -178,6 +178,7 @@ async def consultar_modelo():
     collection.insert_one(nuevo_documento)
 
     return jsonify(resultado_final)
+
 
 # Función para convertir ObjectId a string en todos los documentos
 def parse_json(doc):
