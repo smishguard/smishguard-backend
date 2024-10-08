@@ -207,7 +207,7 @@ def base_datos():
     except Exception as e:
         return jsonify({"error": str(e)})
     
-'''@app.route("/publicar-tweet", methods=['POST'])
+@app.route("/publicar-tweet", methods=['POST'])
 def publicar_tweet():
     data = request.get_json()
     mensaje = data.get('mensaje', '')
@@ -230,7 +230,7 @@ def publicar_tweet():
 
     except requests.exceptions.RequestException as e:
         return jsonify({"mensaje": "Error al publicar el tweet", "ResultadoTwitter": str(e)}), 500
-'''
+
 @app.route("/mensajes-reportados", methods=['GET'])
 def mensajes_reportados():
     try:
@@ -298,6 +298,27 @@ def guardar_mensaje_reportado():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/actualizar-publicado/<mensaje_id>", methods=['PUT'])
+def actualizar_publicado(mensaje_id):
+    try:
+        # Conexión a la colección MensajesReportados
+        collection = db['MensajesReportados']
+
+        # Buscar el mensaje por su ID
+        mensaje = collection.find_one({"_id": ObjectId(mensaje_id)})
+        if not mensaje:
+            return jsonify({"error": "Mensaje no encontrado"}), 404
+
+        # Actualizar el campo "publicado" a true
+        collection.update_one(
+            {"_id": ObjectId(mensaje_id)},
+            {"$set": {"publicado": True}}
+        )
+
+        return jsonify({"mensaje": "El estado de 'publicado' ha sido actualizado exitosamente."}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
