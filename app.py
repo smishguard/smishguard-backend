@@ -237,10 +237,10 @@ def mensajes_reportados():
         # Seleccionar la colección MensajesReportados
         collection = db['MensajesReportados']
 
-        # Realizar una operación en la base de datos (ejemplo: encontrar todos los documentos)
-        documentos = collection.find()
+        # Filtrar solo los mensajes que no han sido publicados (publicado = false)
+        documentos = collection.find({"publicado": False})
         
-        # Convertir los documentos a una lista de diccionarios, y convertir ObjectId a string
+        # Convertir los documentos a una lista de diccionarios y convertir ObjectId a string
         documentos_list = [parse_json(doc) for doc in documentos]
 
         # Devolver los documentos en formato JSON
@@ -248,6 +248,7 @@ def mensajes_reportados():
 
     except Exception as e:
         return jsonify({"error": str(e)})
+
     
 @app.route("/guardar-mensaje-reportado", methods=['POST'])
 def guardar_mensaje_reportado():
