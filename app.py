@@ -184,6 +184,97 @@ def parse_json(doc):
             doc[key] = str(value)
     return doc
 
-# Otros endpoints...
+@app.route("/mensajes-reportados", methods=['GET'])
+def mensajes_reportados():
+    try:
+        # Seleccionar la colección MensajesReportados
+        collection = db['MensajesReportados']
+
+        # Filtrar solo los mensajes que no han sido publicados (publicado = false)
+        documentos = collection.find({"publicado": False})
+        
+        # Convertir los documentos a una lista de diccionarios y convertir ObjectId a string
+        documentos_list = [parse_json(doc) for doc in documentos]
+
+        # Devolver los documentos en formato JSON
+        return jsonify({"documentos": documentos_list})
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+    
+@app.route("/guardar-mensaje-reportado", methods=['POST'])
+def guardar_mensaje_reportado():
+    try:
+        # Obtener los datos enviados en la solicitud
+        data = request.get_json()
+
+        # Validar que los campos requeridos estén presentes
+        contenido = data.get('contenido', '')
+        url = data.get('url', '')
+        analisis = data.get('analisis', {})
+        publicado = data.get('publicado', False)  # Valor por defecto es False
+
+        if not contenido or not url or not analisis:
+            return jsonify({"error": "Faltan campos requeridos (contenido, url o analisis)."}), 400
+
+        # Conexión a la colección MensajesReportados
+        collection = db['MensajesReportados']
+
+        # Verificar si ya existe un mensaje con el mismo contenido
+        mensaje_existente = collection.find_one({"contenido": contenido})
+
+        if mensaje_existente:
+            # Si ya existe, devolver un mensaje indicando que ya fue reportado
+            return jsonify({"mensaje": "El mensaje ya fue reportado previamente.", "documento": parse_json(mensaje_existente)}), 200
+
+        # Crear el documento para insertar
+        nuevo_documento = {
+            "contenido": contenido,
+            "url": url,
+            "publicado": publicado,  # Agregar el campo "publicado"
+            "analisis": {
+                "calificacion_gpt": analisis.get('calificacion_gpt', 0),
+                "calificacion_ml": analisis.get('calificacion_ml', False),
+                "ponderado": analisis.get('ponderado', 0),
+                "nivel_peligro": analisis.get('nivel_peligro', "Indeterminado"),
+                "calificacion_vt": analisis.get('calificacion_vt', False),
+                "justificacion_gpt": analisis.get('justificacion_gpt', ""),
+                "fecha_analisis": analisis.get('fecha_analisis', datetime.utcnow().isoformat() + 'Z')  # Usar fecha actual si no se provee
+            }
+        }
+
+        # Insertar el nuevo documento en la base de datos
+        collection.insert_one(nuevo_documento)
+
+        return jsonify({"mensaje": "El mensaje reportado se ha guardado exitosamente."}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/actualizar-publicado/<mensaje_id>", methods=['PUT'])
+def actualizar_publicado(mensaje_id):
+    try:
+        # Conexión a la colección MensajesReportados
+        collection = db['MensajesReportados']
+
+        # Buscar el mensaje por su ID
+        mensaje = collection.find_one({"_id": ObjectId(mensaje_id)})
+        if not mensaje:
+            return jsonify({"error": "Mensaje no encontrado"}), 404
+
+        # Actualizar el campo "publicado" a true
+        collection.update_one(
+            {"_id": ObjectId(mensaje_id)},
+            {"$set": {"publicado": True}}
+        )
+
+        return jsonify({"mensaje": "El estado de 'publicado' ha sido actualizado exitosamente."}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True)
