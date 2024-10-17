@@ -275,6 +275,31 @@ def actualizar_publicado(mensaje_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/publicar-tweet", methods=['POST'])
+def publicar_tweet():
+    data = request.get_json()
+    mensaje = data.get('mensaje', '')
+
+    if not mensaje:
+        return jsonify({"error": "No se proporcionó un mensaje"}), 400
+
+    url_microservicio_twitter = "https://smishguard-twitter-ms.onrender.com/tweet"
+    headers = {'Content-Type': 'application/json'}
+    payload = {"sms": mensaje}
+
+    try:
+        response = requests.post(url_microservicio_twitter, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        return jsonify({
+            "mensaje": "Tweet publicado exitosamente",
+            "ResultadoTwitter": result
+        }), 200
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({"mensaje": "Error al publicar el tweet", "ResultadoTwitter": str(e)}), 500
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
