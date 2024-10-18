@@ -299,7 +299,130 @@ def publicar_tweet():
     except requests.exceptions.RequestException as e:
         return jsonify({"mensaje": "Error al publicar el tweet", "ResultadoTwitter": str(e)}), 500
 
+# Endpoint para almacenar comentarios de soporte
+@app.route("/comentario-soporte", methods=['POST'])
+def comentario_soporte():
+    try:
+        data = request.get_json()
+        comentario = data.get('comentario', '')
+        correo = data.get('correo', '')
 
+        if not comentario or not correo:
+            return jsonify({"error": "El comentario y el correo son requeridos"}), 400
+
+        # Insertar en la colección ComentariosSoporte
+        collection = db['ComentariosSoporte']
+        nuevo_comentario = {
+            "comentario": comentario,
+            "correo": correo,
+            "fecha": datetime.utcnow().isoformat() + 'Z'
+        }
+        collection.insert_one(nuevo_comentario)
+
+        return jsonify({"mensaje": "Comentario guardado exitosamente."}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Endpoint para consultar comentarios de soporte por correo
+@app.route("/comentario-soporte", methods=['GET'])
+def obtener_todos_comentarios_soporte():
+    try:
+        collection = db['ComentariosSoporte']
+        comentarios = collection.find()
+        comentarios_list = [parse_json(comentario) for comentario in comentarios]
+
+        return jsonify({"comentarios": comentarios_list}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Endpoint para almacenar el historial de mensajes reportados por usuario
+@app.route("/historial-mensajes-reportados", methods=['POST'])
+def historial_mensajes_reportados():
+    try:
+        data = request.get_json()
+        mensaje = data.get('mensaje', '')
+        url = data.get('url', '')
+        analisis = data.get('analisis', {})
+        correo = data.get('correo', '')
+
+        if not mensaje or not url or not analisis or not correo:
+            return jsonify({"error": "Faltan campos requeridos (mensaje, url, analisis, correo)"}), 400
+
+        # Insertar en la colección HistorialMensajesReportadosUsuarios
+        collection = db['HistorialMensajesReportadosUsuarios']
+        nuevo_reporte = {
+            "mensaje": mensaje,
+            "url": url,
+            "correo": correo,
+            "analisis": {
+                "calificacion_gpt": analisis.get('calificacion_gpt', 0),
+                "calificacion_ml": analisis.get('calificacion_ml', False),
+                "ponderado": analisis.get('ponderado', 0),
+                "nivel_peligro": analisis.get('nivel_peligro', "Indeterminado"),
+                "calificacion_vt": analisis.get('calificacion_vt', False),
+                "justificacion_gpt": analisis.get('justificacion_gpt', ""),
+                "fecha_analisis": analisis.get('fecha_analisis', datetime.utcnow().isoformat() + 'Z')
+            }
+        }
+        collection.insert_one(nuevo_reporte)
+
+        return jsonify({"mensaje": "Historial de mensaje reportado guardado exitosamente."}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Endpoint para consultar historial de mensajes reportados por correo
+@app.route("/historial-mensajes-reportados/<correo>", methods=['GET'])
+def obtener_historial_mensajes_reportados(correo):
+    try:
+        collection = db['HistorialMensajesReportadosUsuarios']
+        historial = collection.find({"correo": correo})
+        historial_list = [parse_json(mensaje) for mensaje in historial]
+
+        return jsonify({"historial": historial_list}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Endpoint para almacenar números bloqueados por usuarios
+@app.route("/numeros-bloqueados", methods=['POST'])
+def numeros_bloqueados():
+    try:
+        data = request.get_json()
+        numero = data.get('numero', '')
+        correo = data.get('correo', '')
+
+        if not numero or not correo:
+            return jsonify({"error": "El número de teléfono y el correo son requeridos"}), 400
+
+        # Insertar en la colección NumerosBloqueadosUsuarios
+        collection = db['NumerosBloqueadosUsuarios']
+        nuevo_numero_bloqueado = {
+            "numero": numero,
+            "correo": correo,
+            "fecha_bloqueo": datetime.utcnow().isoformat() + 'Z'
+        }
+        collection.insert_one(nuevo_numero_bloqueado)
+
+        return jsonify({"mensaje": "Número bloqueado guardado exitosamente."}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Endpoint para consultar números bloqueados por correo
+@app.route("/numeros-bloqueados/<correo>", methods=['GET'])
+def obtener_numeros_bloqueados(correo):
+    try:
+        collection = db['NumerosBloqueadosUsuarios']
+        numeros = collection.find({"correo": correo})
+        numeros_list = [parse_json(numero) for numero in numeros]
+
+        return jsonify({"numeros": numeros_list}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
