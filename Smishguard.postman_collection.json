@@ -1,0 +1,307 @@
+{
+	"info": {
+		"_postman_id": "828a4e05-2aea-4621-a96c-8995488fbc73",
+		"name": "Smishguard",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "37778536"
+	},
+	"item": [
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/mensajes-reportados",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/mensajes-reportados",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"mensajes-reportados"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/ping",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/ping",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"ping"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/consultar-modelo",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"mensaje\": \"hola\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/consultar-modelo",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"consultar-modelo"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/guardar-mensaje-reportado",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"contenido\": \"Este es un mensaje sospechoso\",\r\n  \"url\": \"http://sospechoso.com\",\r\n  \"analisis\": {\r\n    \"calificacion_gpt\": 0.8,\r\n    \"calificacion_ml\": 1,\r\n    \"ponderado\": 9,\r\n    \"nivel_peligro\": \"Peligroso\",\r\n    \"calificacion_vt\": 1,\r\n    \"justificacion_gpt\": \"Contenido malicioso detectado\"\r\n  }\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/guardar-mensaje-reportado",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"guardar-mensaje-reportado"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/actualizar-publicado/67109d332666deb916fd0f12",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/actualizar-publicado/67109d332666deb916fd0f12",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"actualizar-publicado",
+						"67109d332666deb916fd0f12"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/publicar-tweet",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"mensaje\": \"Este es un tweet de prueba\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/publicar-tweet",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"publicar-tweet"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/comentario-soporte",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"comentario\": \"Este es un comentario de prueba\",\r\n  \"correo\": \"usuario@example.com\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/comentario-soporte",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"comentario-soporte"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/comentario-soporte",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/comentario-soporte",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"comentario-soporte"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/historial-mensajes-reportados",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"mensaje\": \"Este es un mensaje sospechoso\",\r\n  \"url\": \"http://example.com\",\r\n  \"analisis\": {\r\n    \"calificacion_gpt\": 0.8,\r\n    \"calificacion_ml\": 1,\r\n    \"ponderado\": 9,\r\n    \"nivel_peligro\": \"Peligroso\",\r\n    \"calificacion_vt\": 1,\r\n    \"justificacion_gpt\": \"Contenido malicioso detectado\"\r\n  },\r\n  \"correo\": \"usuario@example.com\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/historial-mensajes-reportados",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"historial-mensajes-reportados"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/historial-mensajes-reportados/usuario@example.com",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/historial-mensajes-reportados/usuario@example.com",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"historial-mensajes-reportados",
+						"usuario@example.com"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/numeros-bloqueados",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"numero\": \"+1234567890\",\r\n  \"correo\": \"usuario@example.com\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/numeros-bloqueados",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"numeros-bloqueados"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "https://smishguard-api-gateway.onrender.com/numeros-bloqueados/usuario@example.com",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://smishguard-api-gateway.onrender.com/numeros-bloqueados/usuario@example.com",
+					"protocol": "https",
+					"host": [
+						"smishguard-api-gateway",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"numeros-bloqueados",
+						"usuario@example.com"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
