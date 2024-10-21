@@ -49,11 +49,13 @@ async def consultar_modelo():
     if mensaje_encontrado:
         # Si el mensaje ya existe en la base de datos, devolver el análisis almacenado en la estructura estandarizada
         return jsonify({
-            "mensaje_analizado": mensaje_encontrado['contenido'],
-            "enlace": mensaje_encontrado['url'],
             "analisis_gpt": mensaje_encontrado['analisis']['justificacion_gpt'],
-            "puntaje": mensaje_encontrado['analisis']['ponderado'],
-            "analisis_smishguard": mensaje_encontrado['analisis']['nivel_peligro']
+            "analisis_smishguard": mensaje_encontrado['analisis']['nivel_peligro'],
+            "enlace": mensaje_encontrado['url'],
+            "resultado_url": mensaje_encontrado['analisis'].get('resultado_url', "No disponible"),
+            "resultado_ml": mensaje_encontrado['analisis'].get('resultado_ml', "No disponible"),
+            "mensaje_analizado": mensaje_encontrado['contenido'],
+            "puntaje": mensaje_encontrado['analisis']['ponderado']
         })
 
     # URLs de los microservicios
@@ -116,13 +118,17 @@ async def consultar_modelo():
     # Manejar los valores devueltos de los microservicios
     valor_vt = 0
     enlace_retornado_vt = "No se analizaron URLs"
+    resultado_url = "Indeterminado"
     if isinstance(response_json_microservicio_vt, dict) and 'overall_result' in response_json_microservicio_vt:
         valor_vt = 1 if response_json_microservicio_vt['overall_result'] == "POSITIVO: ES MALICIOSO" else 0
         enlace_retornado_vt = response_json_microservicio_vt['url']
+        resultado_url = "Malicioso" if valor_vt == 1 else "Seguro"
 
     valor_ml = 0
+    resultado_ml = "No disponible"
     if isinstance(response_json_microservicio, dict) and 'prediction' in response_json_microservicio:
         valor_ml = 1 if response_json_microservicio['prediction'] == 'spam' else 0
+        resultado_ml = "Spam" if valor_ml == 1 else "No Spam"
 
     valor_gpt = 0
     analisis_gpt = "No disponible"
@@ -146,12 +152,15 @@ async def consultar_modelo():
     else:
         analisis_smishguard = "Peligroso"
 
+    # Estructura de la respuesta final con el orden solicitado
     resultado_final = {
-        "mensaje_analizado": mensaje,
-        "enlace": enlace_retornado_vt,
         "analisis_gpt": analisis_gpt,
-        "puntaje": puntaje_escalado,
-        "analisis_smishguard": analisis_smishguard
+        "analisis_smishguard": analisis_smishguard,
+        "enlace": enlace_retornado_vt,
+        "resultado_url": resultado_url,
+        "resultado_ml": resultado_ml,
+        "mensaje_analizado": mensaje,
+        "puntaje": puntaje_escalado
     }
 
     # Verificar que no haya errores antes de guardar en la base de datos
@@ -166,14 +175,14 @@ async def consultar_modelo():
                 "nivel_peligro": analisis_smishguard,
                 "calificacion_vt": valor_vt,
                 "justificacion_gpt": analisis_gpt,
+                "resultado_url": resultado_url,
+                "resultado_ml": resultado_ml,
                 "fecha_analisis": datetime.utcnow().isoformat() + 'Z'
             }
         }
         collection.insert_one(nuevo_documento)
 
     return jsonify(resultado_final)
-
-
 # Función para convertir ObjectId a string en todos los documentos
 def parse_json(doc):
     """
