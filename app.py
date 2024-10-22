@@ -35,7 +35,7 @@ def hello_world():
 def ping():
     return jsonify({"message": "pong"})
 
-app.route("/consultar-modelo", methods=['POST'])
+@app.route("/consultar-modelo", methods=['POST'])
 async def consultar_modelo():
     data = request.get_json()
     mensaje = data.get('mensaje', '')
