@@ -35,7 +35,7 @@ def hello_world():
 def ping():
     return jsonify({"message": "pong"})
 
-@app.route("/consultar-modelo", methods=['POST'])
+app.route("/consultar-modelo", methods=['POST'])
 async def consultar_modelo():
     data = request.get_json()
     mensaje = data.get('mensaje', '')
@@ -136,11 +136,29 @@ async def consultar_modelo():
         valor_gpt = response_json_microservicio_gpt['Calificación']
         analisis_gpt = response_json_microservicio_gpt['Descripción']
 
-    # Calcular el puntaje ponderado
-    ponderacion_vt = 0.35
-    ponderacion_ml = 0.40
-    ponderacion_gpt = 0.25
+    # Ajustar ponderaciones según el caso
+    if not urls:  # Caso Sin URL
+        ponderacion_ml = 0.60
+        ponderacion_gpt = 0.40
+        ponderacion_vt = 0.0
+    elif "error" in response_json_microservicio_gpt:  # Caso Sin GPT
+        ponderacion_ml = 0.70
+        ponderacion_vt = 0.30
+        ponderacion_gpt = 0.0
+    elif "error" in response_json_microservicio:  # Caso Sin ML
+        ponderacion_gpt = 0.70
+        ponderacion_vt = 0.30
+        ponderacion_ml = 0.0
+    elif "error" in response_json_microservicio_vt:  # Caso Sin VT
+        ponderacion_ml = 0.60
+        ponderacion_gpt = 0.40
+        ponderacion_vt = 0.0
+    else:  # Caso Completo
+        ponderacion_vt = 0.35
+        ponderacion_ml = 0.40
+        ponderacion_gpt = 0.25
 
+    # Calcular el puntaje ponderado
     puntaje_total = (valor_vt * ponderacion_vt) + (valor_ml * ponderacion_ml) + (valor_gpt * ponderacion_gpt)
     puntaje_escalado = round(1 + (puntaje_total * 9))
 
