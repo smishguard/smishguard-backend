@@ -93,10 +93,10 @@ async def consultar_modelo():
                 return {"error": "Timeout en ML"}
             except aiohttp.ClientError as e:
                 return {"error": "Error en ML"}
-
         async def consultar_virustotal():
             if not urls:
-                return {"error": "No se encontraron URLs en el mensaje"}
+                # Devolver un resultado predeterminado si no hay URL en el mensaje
+                return {"overall_result": "SIN URL", "url": "No se proporcionó URL"}
             try:
                 async with session.post(url_microservicio_vt, headers=headers, json=payload_vt, timeout=timeout_duration+30) as response:
                     vt_response = await response.json()
@@ -106,6 +106,7 @@ async def consultar_modelo():
                 return {"error": "Timeout en VirusTotal"}
             except aiohttp.ClientError as e:
                 return {"error": "Error en VirusTotal"}
+
 
         gpt_task = consultar_gpt()
         spam_task = consultar_spam()
@@ -182,7 +183,8 @@ async def consultar_modelo():
     }
 
     # Verificar que no haya errores antes de guardar en la base de datos
-    if not any("error" in res for res in [response_json_microservicio_gpt, response_json_microservicio, response_json_microservicio_vt]):
+    if not any("error" in res for res in [response_json_microservicio_gpt, response_json_microservicio]):
+    # Si no hubo errores en GPT o ML, y el resultado de VT es válido o "SIN URL"
         nuevo_documento = {
             "contenido": mensaje,
             "url": enlace_retornado_vt,
