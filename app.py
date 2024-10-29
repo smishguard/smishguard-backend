@@ -317,6 +317,7 @@ def actualizar_publicado(mensaje_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/publicar-tweet", methods=['POST'])
 def publicar_tweet():
     data = request.get_json()
@@ -325,9 +326,12 @@ def publicar_tweet():
     if not mensaje:
         return jsonify({"error": "No se proporcionó un mensaje"}), 400
 
+    # Reemplazar las URLs en el mensaje con "[ENLACE REMOVIDO]"
+    mensaje_sin_url = re.sub(r'\b(?:https?://)(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?\b', '[ENLACE REMOVIDO]', mensaje)
+
     url_microservicio_twitter = "https://smishguard-twitter-ms.onrender.com/tweet"
     headers = {'Content-Type': 'application/json'}
-    payload = {"sms": mensaje}
+    payload = {"sms": mensaje_sin_url}
 
     try:
         response = requests.post(url_microservicio_twitter, headers=headers, json=payload)
