@@ -76,7 +76,7 @@ async def consultar_modelo():
     payload = {"text": mensaje}
 
     # Detectar URLs en el mensaje
-    urls = re.findall(r'\b(?:https?://)(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?\b', mensaje)
+    urls = re.findall(r'\b(?:https?://)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?\b', mensaje)
     payload_vt = {"url": urls[0]} if urls else {}
 
     # Timeout en segundos
@@ -327,7 +327,7 @@ def publicar_tweet():
         return jsonify({"error": "No se proporcionó un mensaje"}), 400
 
     # Reemplazar las URLs en el mensaje con "[ENLACE REMOVIDO]"
-    mensaje_sin_url = re.sub(r'\b(?:https?://)(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?\b', '[ENLACE REMOVIDO]', mensaje)
+    mensaje_sin_url = re.sub(r'\b(?:https?://)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?\b', '[ENLACE REMOVIDO]', mensaje)
 
     url_microservicio_twitter = "https://smishguard-twitter-ms.onrender.com/tweet"
     headers = {'Content-Type': 'application/json'}
