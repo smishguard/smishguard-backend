@@ -68,7 +68,7 @@ async def consultar_modelo():
     payload = {"text": mensaje}
 
     # Detectar URLs en el mensaje
-    urls = re.findall(r'(?:https?://)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?', mensaje)
+    urls = re.findall(r'\b(?:https?://)(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?\b', mensaje)
     payload_vt = {"url": urls[0]} if urls else {}
 
     # Timeout en segundos
