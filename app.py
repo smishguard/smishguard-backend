@@ -35,6 +35,8 @@ def hello_world():
 def ping():
     return jsonify({"message": "pong"})
 
+from datetime import datetime, timedelta
+
 @app.route("/consultar-modelo", methods=['POST'])
 async def consultar_modelo():
     data = request.get_json()
@@ -42,21 +44,27 @@ async def consultar_modelo():
 
     # Conexión a la colección Mensaje
     collection = db['Mensaje']
-    
+
     # Buscar el mensaje en la base de datos
     mensaje_encontrado = collection.find_one({"contenido": mensaje})
 
+    # Calcular la fecha de hace un mes
+    hace_un_mes = datetime.utcnow() - timedelta(days=30)
+
     if mensaje_encontrado:
-        # Si el mensaje ya existe en la base de datos, devolver el análisis almacenado en la estructura estandarizada
-        return jsonify({
-            "analisis_gpt": mensaje_encontrado['analisis']['justificacion_gpt'],
-            "analisis_smishguard": mensaje_encontrado['analisis']['nivel_peligro'],
-            "enlace": mensaje_encontrado['url'],
-            "resultado_url": mensaje_encontrado['analisis'].get('resultado_url', "No disponible"),
-            "resultado_ml": mensaje_encontrado['analisis'].get('resultado_ml', "No disponible"),
-            "mensaje_analizado": mensaje_encontrado['contenido'],
-            "puntaje": mensaje_encontrado['analisis']['ponderado']
-        })
+        # Verificar si el análisis es reciente (menos de un mes)
+        fecha_analisis = datetime.fromisoformat(mensaje_encontrado['analisis']['fecha_analisis'][:-1])  # Sin la "Z"
+        if fecha_analisis > hace_un_mes:
+            # Si el análisis es reciente, devolver los datos almacenados
+            return jsonify({
+                "analisis_gpt": mensaje_encontrado['analisis']['justificacion_gpt'],
+                "analisis_smishguard": mensaje_encontrado['analisis']['nivel_peligro'],
+                "enlace": mensaje_encontrado['url'],
+                "resultado_url": mensaje_encontrado['analisis'].get('resultado_url', "No disponible"),
+                "resultado_ml": mensaje_encontrado['analisis'].get('resultado_ml', "No disponible"),
+                "mensaje_analizado": mensaje_encontrado['contenido'],
+                "puntaje": mensaje_encontrado['analisis']['ponderado']
+            })
 
     # URLs de los microservicios
     url_microservicio_gpt = "https://smishguard-chatgpt-ms.onrender.com/consultar-modelo-gpt"
@@ -75,7 +83,7 @@ async def consultar_modelo():
     timeout_duration = 15
 
     async with aiohttp.ClientSession() as session:
-
+        
         async def consultar_gpt():
             try:
                 async with session.post(url_microservicio_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
@@ -93,12 +101,13 @@ async def consultar_modelo():
                 return {"error": "Timeout en ML"}
             except aiohttp.ClientError as e:
                 return {"error": "Error en ML"}
+
         async def consultar_virustotal():
             if not urls:
                 # Devolver un resultado predeterminado si no hay URL en el mensaje
                 return {"overall_result": "SIN URL", "url": "No se proporcionó URL"}
             try:
-                async with session.post(url_microservicio_vt, headers=headers, json=payload_vt, timeout=timeout_duration+30) as response:
+                async with session.post(url_microservicio_vt, headers=headers, json=payload_vt, timeout=timeout_duration + 30) as response:
                     vt_response = await response.json()
                     vt_response['url'] = urls[0]
                     return vt_response
@@ -106,7 +115,6 @@ async def consultar_modelo():
                 return {"error": "Timeout en VirusTotal"}
             except aiohttp.ClientError as e:
                 return {"error": "Error en VirusTotal"}
-
 
         gpt_task = consultar_gpt()
         spam_task = consultar_spam()
@@ -182,9 +190,8 @@ async def consultar_modelo():
         "puntaje": puntaje_escalado
     }
 
-    # Verificar que no haya errores antes de guardar en la base de datos
+    # Si se realizó un análisis nuevo o es la primera vez, guardar o actualizar en la base de datos
     if not any("error" in res for res in [response_json_microservicio_gpt, response_json_microservicio]):
-    # Si no hubo errores en GPT o ML, y el resultado de VT es válido o "SIN URL"
         nuevo_documento = {
             "contenido": mensaje,
             "url": enlace_retornado_vt,
@@ -200,9 +207,15 @@ async def consultar_modelo():
                 "fecha_analisis": datetime.utcnow().isoformat() + 'Z'
             }
         }
-        collection.insert_one(nuevo_documento)
+        if mensaje_encontrado:
+            # Actualizar el documento existente
+            collection.update_one({"_id": mensaje_encontrado["_id"]}, {"$set": nuevo_documento})
+        else:
+            # Insertar un nuevo documento
+            collection.insert_one(nuevo_documento)
 
     return jsonify(resultado_final)
+
 # Función para convertir ObjectId a string en todos los documentos
 def parse_json(doc):
     """
