@@ -147,8 +147,8 @@ async def consultar_modelo():
     valor_gpt = 0
     analisis_gpt = "No disponible"
     if isinstance(response_json_gpt, dict) and 'Calificación' in response_json_gpt:
-        valor_gpt = response_json_gpt['Calificación']
-        analisis_gpt = response_json_gpt['Descripción']
+        valor_gpt = response_json_gpt.get("Calificación", 0)
+        analisis_gpt = response_json_gpt.get("Comentario", "Sin comentario")
 
     # Ajustar ponderaciones y calcular el puntaje ponderado
     if not urls:
