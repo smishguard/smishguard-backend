@@ -487,23 +487,24 @@ def eliminar_historial_mensaje_reportado(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/numeros-bloqueados/<numero>", methods=['DELETE'])
-def eliminar_numero_bloqueado(numero):
+@app.route("/numeros-bloqueados/<correo>/<numero>", methods=['DELETE'])
+def eliminar_numero_bloqueado(correo, numero):
     try:
         # Conexión a la colección NumerosBloqueadosUsuarios
         collection = db['NumerosBloqueadosUsuarios']
         
-        # Buscar y eliminar el documento usando el número de celular
-        result = collection.delete_one({"numero": numero})
+        # Buscar y eliminar el documento usando el correo y el número de celular
+        result = collection.delete_one({"correo": correo, "numero": numero})
         
         # Verificar si se encontró y eliminó el documento
         if result.deleted_count == 0:
-            return jsonify({"error": "No se encontró el número a eliminar"}), 404
+            return jsonify({"error": "No se encontró el número a eliminar para el correo especificado"}), 404
 
         return jsonify({"mensaje": "Número bloqueado eliminado exitosamente"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
