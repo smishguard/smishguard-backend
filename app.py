@@ -42,8 +42,8 @@ async def consultar_modelo():
     mensaje = data.get('mensaje', '')
     numero_celular = data.get('numero_celular', '')
 
-    # Conexión a la colección Mensaje
-    collection = db['Mensaje']
+    # Conexión a la colección Mensajes
+    collection = db['Mensajes']
 
     # Buscar el mensaje en la base de datos
     mensaje_encontrado = collection.find_one({"contenido": mensaje, "numero_celular": numero_celular})
@@ -231,11 +231,11 @@ def parse_json(doc):
             doc[key] = str(value)
     return doc
 
-@app.route("/mensajes-reportados", methods=['GET'])
-def mensajes_reportados():
+@app.route("/mensajes-para-publicar", methods=['GET'])
+def mensajes_para_publicar():
     try:
-        # Seleccionar la colección MensajesReportados
-        collection = db['MensajesReportados']
+        # Seleccionar la colección MensajesParaPublicar
+        collection = db['MensajesParaPublicar']
 
         # Filtrar solo los mensajes que no han sido publicados (publicado = false)
         documentos = collection.find({"publicado": False})
@@ -250,8 +250,8 @@ def mensajes_reportados():
         return jsonify({"error": str(e)})
 
     
-@app.route("/guardar-mensaje-reportado", methods=['POST'])
-def guardar_mensaje_reportado():
+@app.route("/guardar-mensaje-para-publicar", methods=['POST'])
+def guardar_mensaje_para_publicar():
     try:
         # Obtener los datos enviados en la solicitud
         data = request.get_json()
@@ -265,8 +265,8 @@ def guardar_mensaje_reportado():
         if not contenido or not url or not analisis:
             return jsonify({"error": "Faltan campos requeridos (contenido, url o analisis)."}), 400
 
-        # Conexión a la colección MensajesReportados
-        collection = db['MensajesReportados']
+        # Conexión a la colección MensajesParaPublicar
+        collection = db['MensajesParaPublicar']
 
         # Verificar si ya existe un mensaje con el mismo contenido
         mensaje_existente = collection.find_one({"contenido": contenido})
@@ -303,8 +303,8 @@ def guardar_mensaje_reportado():
 @app.route("/actualizar-publicado/<mensaje_id>", methods=['PUT'])
 def actualizar_publicado(mensaje_id):
     try:
-        # Conexión a la colección MensajesReportados
-        collection = db['MensajesReportados']
+        # Conexión a la colección MensajesParaPublicar
+        collection = db['MensajesParaPublicar']
 
         # Buscar el mensaje por su ID
         mensaje = collection.find_one({"_id": ObjectId(mensaje_id)})
@@ -389,8 +389,8 @@ def obtener_todos_comentarios_soporte():
         return jsonify({"error": str(e)}), 500
 
 # Endpoint para almacenar el historial de mensajes reportados por usuario
-@app.route("/historial-mensajes-reportados", methods=['POST'])
-def historial_mensajes_reportados():
+@app.route("/historial-analisis-usuarios", methods=['POST'])
+def historial_analisis_usuarios():
     try:
         data = request.get_json()
         mensaje = data.get('mensaje', '')
@@ -401,8 +401,8 @@ def historial_mensajes_reportados():
         if not mensaje or not url or not analisis or not correo:
             return jsonify({"error": "Faltan campos requeridos (mensaje, url, analisis, correo)"}), 400
 
-        # Insertar en la colección HistorialMensajesReportadosUsuarios
-        collection = db['HistorialMensajesReportadosUsuarios']
+        # Insertar en la colección HistorialAnalisisUsuarios
+        collection = db['HistorialAnalisisUsuarios']
         nuevo_reporte = {
             "mensaje": mensaje,
             "url": url,
@@ -425,10 +425,10 @@ def historial_mensajes_reportados():
         return jsonify({"error": str(e)}), 500
 
 # Endpoint para consultar historial de mensajes reportados por correo
-@app.route("/historial-mensajes-reportados/<correo>", methods=['GET'])
-def obtener_historial_mensajes_reportados(correo):
+@app.route("/historial-analisis-usuarios/<correo>", methods=['GET'])
+def obtener_historial_analisis_usuarios(correo):
     try:
-        collection = db['HistorialMensajesReportadosUsuarios']
+        collection = db['HistorialAnalisisUsuarios']
         historial = collection.find({"correo": correo})
         historial_list = [parse_json(mensaje) for mensaje in historial]
 
@@ -475,10 +475,10 @@ def obtener_numeros_bloqueados(correo):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/historial-mensajes-reportados/<id>", methods=['DELETE'])
+@app.route("/historial-analisis-usuarios/<id>", methods=['DELETE'])
 def eliminar_historial_mensaje_reportado(id):
     try:
-        collection = db['HistorialMensajesReportadosUsuarios']
+        collection = db['HistorialAnalisisUsuarios']
         result = collection.delete_one({"_id": ObjectId(id)})
         if result.deleted_count == 0:
             return jsonify({"error": "No se encontró el historial a eliminar"}), 404
