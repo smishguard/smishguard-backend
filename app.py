@@ -8,7 +8,7 @@ import re
 import aiohttp
 import asyncio
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 CORS(app)  # Habilitar CORS para todas las rutas
@@ -35,27 +35,25 @@ def hello_world():
 def ping():
     return jsonify({"message": "pong"})
 
-from datetime import datetime, timedelta
 
 @app.route("/consultar-modelo", methods=['POST'])
 async def consultar_modelo():
     data = request.get_json()
     mensaje = data.get('mensaje', '')
+    numero_celular = data.get('numero_celular', '')
 
     # Conexión a la colección Mensaje
     collection = db['Mensaje']
 
     # Buscar el mensaje en la base de datos
-    mensaje_encontrado = collection.find_one({"contenido": mensaje})
+    mensaje_encontrado = collection.find_one({"contenido": mensaje, "numero_celular": numero_celular})
 
     # Calcular la fecha de hace un mes
     hace_un_mes = datetime.utcnow() - timedelta(days=30)
 
     if mensaje_encontrado:
-        # Verificar si el análisis es reciente (menos de un mes)
-        fecha_analisis = datetime.fromisoformat(mensaje_encontrado['analisis']['fecha_analisis'][:-1])  # Sin la "Z"
+        fecha_analisis = datetime.fromisoformat(mensaje_encontrado['analisis']['fecha_analisis'][:-1])
         if fecha_analisis > hace_un_mes:
-            # Si el análisis es reciente, devolver los datos almacenados
             return jsonify({
                 "analisis_gpt": mensaje_encontrado['analisis']['justificacion_gpt'],
                 "analisis_smishguard": mensaje_encontrado['analisis']['nivel_peligro'],
@@ -63,17 +61,17 @@ async def consultar_modelo():
                 "resultado_url": mensaje_encontrado['analisis'].get('resultado_url', "No disponible"),
                 "resultado_ml": mensaje_encontrado['analisis'].get('resultado_ml', "No disponible"),
                 "mensaje_analizado": mensaje_encontrado['contenido'],
+                "numero_celular": mensaje_encontrado['numero_celular'],
                 "puntaje": mensaje_encontrado['analisis']['ponderado']
             })
 
     # URLs de los microservicios
     url_microservicio_gpt = "https://smishguard-chatgpt-ms.onrender.com/consultar-modelo-gpt"
-    url_microservicio = "https://smishguard-modeloml-ms.onrender.com/predict"
+    url_microservicio_ml = "https://smishguard-modeloml-ms.onrender.com/predict"
     url_microservicio_vt = "https://smishguard-virustotal-ms.onrender.com/analyze-url"
 
     headers = {'Content-Type': 'application/json'}
-    payload_gpt = {"mensaje": mensaje}
-    payload = {"text": mensaje}
+    payload_ml = {"text": mensaje}
 
     # Detectar URLs en el mensaje
     urls = re.findall(r'\b(?:https?://)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?\b', mensaje)
@@ -83,28 +81,18 @@ async def consultar_modelo():
     timeout_duration = 15
 
     async with aiohttp.ClientSession() as session:
-        
-        async def consultar_gpt():
-            try:
-                async with session.post(url_microservicio_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
-                    return await response.json()
-            except asyncio.TimeoutError:
-                return {"error": "Timeout en GPT"}
-            except aiohttp.ClientError as e:
-                return {"error": "Error en GPT"}
 
         async def consultar_spam():
             try:
-                async with session.post(url_microservicio, headers=headers, json=payload, timeout=timeout_duration) as response:
+                async with session.post(url_microservicio_ml, headers=headers, json=payload_ml, timeout=timeout_duration) as response:
                     return await response.json()
             except asyncio.TimeoutError:
                 return {"error": "Timeout en ML"}
-            except aiohttp.ClientError as e:
+            except aiohttp.ClientError:
                 return {"error": "Error en ML"}
 
         async def consultar_virustotal():
             if not urls:
-                # Devolver un resultado predeterminado si no hay URL en el mensaje
                 return {"overall_result": "SIN URL", "url": "No se proporcionó URL"}
             try:
                 async with session.post(url_microservicio_vt, headers=headers, json=payload_vt, timeout=timeout_duration + 30) as response:
@@ -113,61 +101,78 @@ async def consultar_modelo():
                     return vt_response
             except asyncio.TimeoutError:
                 return {"error": "Timeout en VirusTotal"}
-            except aiohttp.ClientError as e:
+            except aiohttp.ClientError:
                 return {"error": "Error en VirusTotal"}
 
-        gpt_task = consultar_gpt()
+        # Ejecutar consultas a ML y VirusTotal primero
         spam_task = consultar_spam()
         vt_task = consultar_virustotal()
 
-        response_json_microservicio_gpt, response_json_microservicio, response_json_microservicio_vt = await asyncio.gather(
-            gpt_task, spam_task, vt_task
-        )
+        response_json_ml, response_json_vt = await asyncio.gather(spam_task, vt_task)
 
-    # Manejar los valores devueltos de los microservicios
+    # Procesar respuestas de ML y VirusTotal
     valor_vt = 0
     enlace_retornado_vt = "No se analizaron URLs"
     resultado_url = "Indeterminado"
-    if isinstance(response_json_microservicio_vt, dict) and 'overall_result' in response_json_microservicio_vt:
-        valor_vt = 1 if response_json_microservicio_vt['overall_result'] == "POSITIVO: ES MALICIOSO" else 0
-        enlace_retornado_vt = response_json_microservicio_vt['url']
+    if isinstance(response_json_vt, dict) and 'overall_result' in response_json_vt:
+        valor_vt = 1 if response_json_vt['overall_result'] == "POSITIVO: ES MALICIOSO" else 0
+        enlace_retornado_vt = response_json_vt['url']
         resultado_url = "Malicioso" if valor_vt == 1 else "Seguro"
 
     valor_ml = 0
     resultado_ml = "No disponible"
-    if isinstance(response_json_microservicio, dict) and 'prediction' in response_json_microservicio:
-        valor_ml = 1 if response_json_microservicio['prediction'] == 'spam' else 0
+    if isinstance(response_json_ml, dict) and 'prediction' in response_json_ml:
+        valor_ml = 1 if response_json_ml['prediction'] == 'spam' else 0
         resultado_ml = "Spam" if valor_ml == 1 else "No Spam"
+
+    # Preparar payload para el servicio GPT con los resultados obtenidos
+    payload_gpt = {
+        "mensaje": mensaje,
+        "resultado_ml": resultado_ml,
+        "resultado_url": resultado_url
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async def consultar_gpt():
+            try:
+                async with session.post(url_microservicio_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
+                    return await response.json()
+            except asyncio.TimeoutError:
+                return {"error": "Timeout en GPT"}
+            except aiohttp.ClientError:
+                return {"error": "Error en GPT"}
+
+        response_json_gpt = await consultar_gpt()
 
     valor_gpt = 0
     analisis_gpt = "No disponible"
-    if isinstance(response_json_microservicio_gpt, dict) and 'Calificación' in response_json_microservicio_gpt:
-        valor_gpt = response_json_microservicio_gpt['Calificación']
-        analisis_gpt = response_json_microservicio_gpt['Descripción']
+    if isinstance(response_json_gpt, dict) and 'Calificación' in response_json_gpt:
+        valor_gpt = response_json_gpt['Calificación']
+        analisis_gpt = response_json_gpt['Descripción']
 
-    # Ajustar ponderaciones según el caso
-    if not urls:  # Caso Sin URL
+    # Ajustar ponderaciones y calcular el puntaje ponderado
+    if not urls:
         ponderacion_ml = 0.60
         ponderacion_gpt = 0.40
         ponderacion_vt = 0.0
-    elif "error" in response_json_microservicio_gpt:  # Caso Sin GPT
+    elif "error" in response_json_gpt:
         ponderacion_ml = 0.70
         ponderacion_vt = 0.30
         ponderacion_gpt = 0.0
-    elif "error" in response_json_microservicio:  # Caso Sin ML
+    elif "error" in response_json_ml:
         ponderacion_gpt = 0.70
         ponderacion_vt = 0.30
         ponderacion_ml = 0.0
-    elif "error" in response_json_microservicio_vt:  # Caso Sin VT
+    elif "error" in response_json_vt:
         ponderacion_ml = 0.60
         ponderacion_gpt = 0.40
         ponderacion_vt = 0.0
-    else:  # Caso Completo
+    else:
         ponderacion_vt = 0.35
         ponderacion_ml = 0.40
         ponderacion_gpt = 0.25
 
-    # Calcular el puntaje ponderado
+    # Calcular el puntaje total
     puntaje_total = (valor_vt * ponderacion_vt) + (valor_ml * ponderacion_ml) + (valor_gpt * ponderacion_gpt)
     puntaje_escalado = round(1 + (puntaje_total * 9))
 
@@ -179,7 +184,7 @@ async def consultar_modelo():
     else:
         analisis_smishguard = "Peligroso"
 
-    # Estructura de la respuesta final con el orden solicitado
+    # Estructura de la respuesta final
     resultado_final = {
         "analisis_gpt": analisis_gpt,
         "analisis_smishguard": analisis_smishguard,
@@ -187,13 +192,15 @@ async def consultar_modelo():
         "resultado_url": resultado_url,
         "resultado_ml": resultado_ml,
         "mensaje_analizado": mensaje,
+        "numero_celular": numero_celular,
         "puntaje": puntaje_escalado
     }
 
     # Si se realizó un análisis nuevo o es la primera vez, guardar o actualizar en la base de datos
-    if not any("error" in res for res in [response_json_microservicio_gpt, response_json_microservicio]):
+    if not any("error" in res for res in [response_json_gpt, response_json_ml]):
         nuevo_documento = {
             "contenido": mensaje,
+            "numero_celular": numero_celular,
             "url": enlace_retornado_vt,
             "analisis": {
                 "calificacion_gpt": valor_gpt,
@@ -208,10 +215,8 @@ async def consultar_modelo():
             }
         }
         if mensaje_encontrado:
-            # Actualizar el documento existente
             collection.update_one({"_id": mensaje_encontrado["_id"]}, {"$set": nuevo_documento})
         else:
-            # Insertar un nuevo documento
             collection.insert_one(nuevo_documento)
 
     return jsonify(resultado_final)
@@ -482,13 +487,19 @@ def eliminar_historial_mensaje_reportado(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/numeros-bloqueados/<id>", methods=['DELETE'])
-def eliminar_numero_bloqueado(id):
+@app.route("/numeros-bloqueados/<numero>", methods=['DELETE'])
+def eliminar_numero_bloqueado(numero):
     try:
+        # Conexión a la colección NumerosBloqueadosUsuarios
         collection = db['NumerosBloqueadosUsuarios']
-        result = collection.delete_one({"_id": ObjectId(id)})
+        
+        # Buscar y eliminar el documento usando el número de celular
+        result = collection.delete_one({"numero": numero})
+        
+        # Verificar si se encontró y eliminó el documento
         if result.deleted_count == 0:
             return jsonify({"error": "No se encontró el número a eliminar"}), 404
+
         return jsonify({"mensaje": "Número bloqueado eliminado exitosamente"}), 200
 
     except Exception as e:
