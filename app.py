@@ -61,7 +61,7 @@ async def consultar_modelo():
                 "resultado_url": mensaje_encontrado['analisis'].get('resultado_url', "No disponible"),
                 "resultado_ml": mensaje_encontrado['analisis'].get('resultado_ml', "No disponible"),
                 "mensaje_analizado": mensaje_encontrado['contenido'],
-                "numero_celular": mensaje_encontrado['numero_celular'],
+                "numero_celular": numero_celular,
                 "puntaje": mensaje_encontrado['analisis']['ponderado']
             })
 
@@ -125,11 +125,9 @@ async def consultar_modelo():
         valor_ml = 1 if response_json_ml['prediction'] == 'spam' else 0
         resultado_ml = "Spam" if valor_ml == 1 else "No Spam"
 
-    # Preparar payload para el servicio GPT con los resultados obtenidos
+    # Preparar payload para el servicio GPT con solo el mensaje
     payload_gpt = {
-        "mensaje": mensaje,
-        "resultado_ml": resultado_ml,
-        "resultado_url": resultado_url
+        "mensaje": mensaje
     }
 
     async with aiohttp.ClientSession() as session:
@@ -148,7 +146,7 @@ async def consultar_modelo():
     analisis_gpt = "No disponible"
     if isinstance(response_json_gpt, dict) and 'Calificación' in response_json_gpt:
         valor_gpt = response_json_gpt.get("Calificación", 0)
-        analisis_gpt = response_json_gpt.get("Comentario", "Sin comentario")
+        analisis_gpt = response_json_gpt.get("Descripción", "Sin comentario")
 
     # Ajustar ponderaciones y calcular el puntaje ponderado
     if not urls:
@@ -220,6 +218,7 @@ async def consultar_modelo():
             collection.insert_one(nuevo_documento)
 
     return jsonify(resultado_final)
+
 
 # Función para convertir ObjectId a string en todos los documentos
 def parse_json(doc):
