@@ -388,6 +388,7 @@ def obtener_todos_comentarios_soporte():
         return jsonify({"error": str(e)}), 500
 
 # Endpoint para almacenar el historial de mensajes reportados por usuario
+# Endpoint para almacenar el historial de mensajes reportados por usuario
 @app.route("/historial-analisis-usuarios", methods=['POST'])
 def historial_analisis_usuarios():
     try:
@@ -396,9 +397,11 @@ def historial_analisis_usuarios():
         url = data.get('url', '')
         analisis = data.get('analisis', {})
         correo = data.get('correo', '')
+        numero_celular = data.get('numero_celular', '')  # Nuevo campo
 
-        if not mensaje or not url or not analisis or not correo:
-            return jsonify({"error": "Faltan campos requeridos (mensaje, url, analisis, correo)"}), 400
+        # Verificar que todos los campos requeridos están presentes
+        if not mensaje or not url or not analisis or not correo or not numero_celular:
+            return jsonify({"error": "Faltan campos requeridos (mensaje, url, analisis, correo, numero_celular)"}), 400
 
         # Insertar en la colección HistorialAnalisisUsuarios
         collection = db['HistorialAnalisisUsuarios']
@@ -406,6 +409,7 @@ def historial_analisis_usuarios():
             "mensaje": mensaje,
             "url": url,
             "correo": correo,
+            "numero_celular": numero_celular,  # Guardar el número de celular en el historial
             "analisis": {
                 "calificacion_gpt": analisis.get('calificacion_gpt', 0),
                 "calificacion_ml": analisis.get('calificacion_ml', False),
@@ -422,6 +426,7 @@ def historial_analisis_usuarios():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # Endpoint para consultar historial de mensajes reportados por correo
 @app.route("/historial-analisis-usuarios/<correo>", methods=['GET'])
