@@ -320,7 +320,23 @@ def actualizar_publicado(mensaje_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+@app.route("/eliminar-mensaje-para-publicar/<mensaje_id>", methods=['DELETE'])
+def eliminar_mensaje(mensaje_id):
+    try:
+        # Conexión a la colección MensajesParaPublicar
+        collection = db['MensajesParaPublicar']
 
+        # Intentar eliminar el mensaje por su ID
+        resultado = collection.delete_one({"_id": ObjectId(mensaje_id)})
+        
+        # Verificar si el mensaje fue encontrado y eliminado
+        if resultado.deleted_count == 0:
+            return jsonify({"error": "Mensaje no encontrado"}), 404
+
+        return jsonify({"mensaje": "El mensaje ha sido eliminado exitosamente."}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/publicar-tweet", methods=['POST'])
 def publicar_tweet():
@@ -387,8 +403,26 @@ def obtener_todos_comentarios_soporte():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/eliminar-comentario-soporte/<comentario_id>", methods=['DELETE'])
+def eliminar_comentario(comentario_id):
+    try:
+        # Conexión a la colección ComentariosSoporte
+        collection = db['ComentariosSoporte']
+
+        # Intentar eliminar el comentario por su ID
+        resultado = collection.delete_one({"_id": ObjectId(comentario_id)})
+        
+        # Verificar si el comentario fue encontrado y eliminado
+        if resultado.deleted_count == 0:
+            return jsonify({"error": "Comentario no encontrado"}), 404
+
+        return jsonify({"mensaje": "El comentario ha sido eliminado exitosamente."}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # Endpoint para almacenar el historial de mensajes reportados por usuario
 # Endpoint para almacenar el historial de mensajes reportados por usuario
+
 @app.route("/historial-analisis-usuarios", methods=['POST'])
 def historial_analisis_usuarios():
     try:
@@ -426,7 +460,6 @@ def historial_analisis_usuarios():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # Endpoint para consultar historial de mensajes reportados por correo
 @app.route("/historial-analisis-usuarios/<correo>", methods=['GET'])
