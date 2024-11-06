@@ -194,7 +194,7 @@ async def consultar_modelo():
         "puntaje": puntaje_escalado
     }
 
-    # Preparar payload para el servicio GPT con todo el analísis para realizar la conclución
+    # Preparar payload para el servicio GPT con todo el analísis para realizar la conclusión
     payload_gpt = {
         "resultado_final": resultado_final
     }
@@ -209,7 +209,7 @@ async def consultar_modelo():
             except aiohttp.ClientError:
                 return {"error": "Error en GPT"}
 
-        response_json_gpt = await consultar_gpt()
+        response_json_gpt = await conclusion_gpt()
 
     conclusion_gpt = "No disponible"
     if isinstance(response_json_gpt, dict) and 'conclusion' in response_json_gpt:
