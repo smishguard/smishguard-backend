@@ -9,6 +9,7 @@ import aiohttp
 import asyncio
 import os
 from datetime import datetime, timedelta
+from random import randint
 
 app = Flask(__name__)
 CORS(app)  # Habilitar CORS para todas las rutas
@@ -542,6 +543,65 @@ def eliminar_numero_bloqueado(correo, numero):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/mensaje-aleatorio", methods=['GET'])
+def mensaje_aleatorio():
+    try:
+        collection = db['Mensajes']
+        total_mensajes = collection.count_documents({})
+        if total_mensajes == 0:
+            return jsonify({"error": "No hay mensajes disponibles"}), 404
+        random_index = randint(0, total_mensajes - 1)
+        mensaje_aleatorio = collection.find().skip(random_index).limit(1)
+        mensaje = next(mensaje_aleatorio, None)
+        mensaje = parse_json(mensaje)
+        return jsonify({"mensaje": mensaje}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/estadisticas", methods=['GET'])
+def obtener_estadisticas():
+    try:
+        # Conexión a la colección Mensajes
+        mensajes_collection = db['Mensajes']
+
+        # Contar el total de mensajes analizados
+        total_mensajes = mensajes_collection.count_documents({})
+
+        # Contar cuántos mensajes se catalogaron como seguros, sospechosos y peligrosos
+        seguros = mensajes_collection.count_documents({"analisis.nivel_peligro": "Seguro"})
+        sospechosos = mensajes_collection.count_documents({"analisis.nivel_peligro": "Sospechoso"})
+        peligrosos = mensajes_collection.count_documents({"analisis.nivel_peligro": "Peligroso"})
+
+        # Conexión a la colección MensajesParaPublicar
+        mensajes_publicar_collection = db['MensajesParaPublicar']
+
+        # Contar el total de mensajes en MensajesParaPublicar
+        total_mensajes_para_publicar = mensajes_publicar_collection.count_documents({})
+
+        # Contar cuántos mensajes han sido publicados y cuántos no
+        publicados = mensajes_publicar_collection.count_documents({"publicado": True})
+        no_publicados = mensajes_publicar_collection.count_documents({"publicado": False})
+
+        # Estructurar la respuesta en JSON
+        estadisticas = {
+            "mensajes": {
+                "total_analizados": total_mensajes,
+                "seguros": seguros,
+                "sospechosos": sospechosos,
+                "peligrosos": peligrosos
+            },
+            "mensajes_para_publicar": {
+                "total": total_mensajes_para_publicar,
+                "publicados": publicados,
+                "no_publicados": no_publicados
+            }
+        }
+
+        return jsonify(estadisticas), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
