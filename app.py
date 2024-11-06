@@ -68,7 +68,7 @@ async def consultar_modelo():
 
     # URLs de los microservicios
     url_microservicio_gpt = "https://smishguard-chatgpt-ms.onrender.com/consultar-modelo-gpt"
-    url_conclucion_gpt = "https://smishguard-chatgpt-ms.onrender.com/conclucion-modelo-gpt"
+    url_conclusion_gpt = "https://smishguard-chatgpt-ms.onrender.com/conclusion-modelo-gpt"
     url_microservicio_ml = "https://smishguard-modeloml-ms.onrender.com/predict"
     url_microservicio_vt = "https://smishguard-virustotal-ms.onrender.com/analyze-url"
 
@@ -200,9 +200,9 @@ async def consultar_modelo():
     }
 
     async with aiohttp.ClientSession() as session:
-        async def consultar_gpt():
+        async def conclusion_gpt():
             try:
-                async with session.post(url_conclucion_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
+                async with session.post(url_conclusion_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
                     return await response.json()
             except asyncio.TimeoutError:
                 return {"error": "Timeout en GPT"}
@@ -211,9 +211,9 @@ async def consultar_modelo():
 
         response_json_gpt = await consultar_gpt()
 
-    conclucion_gpt = "No disponible"
-    if isinstance(response_json_gpt, dict) and 'Conclucion' in response_json_gpt:
-        conclucion_gpt = response_json_gpt.get("No disponible", 0)
+    conclusion_gpt = "No disponible"
+    if isinstance(response_json_gpt, dict) and 'conclusion' in response_json_gpt:
+        conclusion_gpt = response_json_gpt.get("conclusion", "No disponible")
 
     # Si se realizó un análisis nuevo o es la primera vez, guardar o actualizar en la base de datos
     if not any("error" in res for res in [response_json_gpt, response_json_ml]):
@@ -227,7 +227,7 @@ async def consultar_modelo():
                 "ponderado": puntaje_escalado,
                 "nivel_peligro": analisis_smishguard,
                 "calificacion_vt": valor_vt,
-                "justificacion_gpt": conclucion_gpt,
+                "justificacion_gpt": conclusion_gpt,
                 "resultado_url": resultado_url,
                 "resultado_ml": resultado_ml,
                 "fecha_analisis": datetime.utcnow().isoformat() + 'Z'
