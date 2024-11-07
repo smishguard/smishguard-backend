@@ -199,22 +199,17 @@ async def consultar_modelo():
         "resultado_parcial": resultado_parcial
     }
 
-    async with aiohttp.ClientSession() as session:
-        async def conclusion_gpt():
-            try:
-                async with session.post(url_conclusion_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
-                    return await response.json()
-            except asyncio.TimeoutError:
-                return {"error": "Timeout en GPT"}
-            except aiohttp.ClientError:
-                return {"error": "Error en GPT"}
-
-        response_json_gpt = await conclusion_gpt()
+    try:
+        response = requests.post(url_conclusion_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration)
+        response_json_gpt = response.json()
+    except requests.Timeout:
+        response_json_gpt = {"error": "Timeout en GPT"}
+    except requests.RequestException:
+        response_json_gpt = {"error": "Error en GPT"}
 
     conclusion_gpt = "No disponible"
     if isinstance(response_json_gpt, dict) and 'conclusion' in response_json_gpt:
         conclusion_gpt = response_json_gpt.get("conclusion", "No disponible")
-
     # Si se realizó un análisis nuevo o es la primera vez, guardar o actualizar en la base de datos
     if not any("error" in res for res in [response_json_gpt, response_json_ml]):
         nuevo_documento = {
