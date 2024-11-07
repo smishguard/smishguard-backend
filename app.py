@@ -68,6 +68,7 @@ async def consultar_modelo():
 
     # URLs de los microservicios
     url_microservicio_gpt = "https://smishguard-chatgpt-ms.onrender.com/consultar-modelo-gpt"
+    url_conclusion_gpt = "https://smishguard-chatgpt-ms.onrender.com/conclusion-modelo-gpt"
     url_microservicio_ml = "https://smishguard-modeloml-ms.onrender.com/predict"
     url_microservicio_vt = "https://smishguard-virustotal-ms.onrender.com/analyze-url"
 
@@ -144,10 +145,8 @@ async def consultar_modelo():
         response_json_gpt = await consultar_gpt()
 
     valor_gpt = 0
-    analisis_gpt = "No disponible"
     if isinstance(response_json_gpt, dict) and 'Calificación' in response_json_gpt:
         valor_gpt = response_json_gpt.get("Calificación", 0)
-        analisis_gpt = response_json_gpt.get("Descripción", "Sin comentario")
 
     # Ajustar ponderaciones y calcular el puntaje ponderado
     if not urls:
@@ -183,9 +182,9 @@ async def consultar_modelo():
     else:
         analisis_smishguard = "Peligroso"
 
-    # Estructura de la respuesta final
-    resultado_final = {
-        "analisis_gpt": analisis_gpt,
+    # Estructura de la respuesta
+    resultado_parcial = {
+        "valor_gpt": valor_gpt,
         "analisis_smishguard": analisis_smishguard,
         "enlace": enlace_retornado_vt,
         "resultado_url": resultado_url,
@@ -194,6 +193,27 @@ async def consultar_modelo():
         "numero_celular": numero_celular,
         "puntaje": puntaje_escalado
     }
+
+    # Preparar payload para el servicio GPT con todo el analísis para realizar la conclusión
+    payload_gpt = {
+        "resultado_parcial": resultado_parcial
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async def conclusion_gpt():
+            try:
+                async with session.post(url_conclusion_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
+                    return await response.json()
+            except asyncio.TimeoutError:
+                return {"error": "Timeout en GPT"}
+            except aiohttp.ClientError:
+                return {"error": "Error en GPT"}
+
+        response_json_gpt = await conclusion_gpt()
+
+    conclusion_gpt = "No disponible"
+    if isinstance(response_json_gpt, dict) and 'conclusion' in response_json_gpt:
+        conclusion_gpt = response_json_gpt.get("conclusion", "No disponible")
 
     # Si se realizó un análisis nuevo o es la primera vez, guardar o actualizar en la base de datos
     if not any("error" in res for res in [response_json_gpt, response_json_ml]):
@@ -207,7 +227,7 @@ async def consultar_modelo():
                 "ponderado": puntaje_escalado,
                 "nivel_peligro": analisis_smishguard,
                 "calificacion_vt": valor_vt,
-                "justificacion_gpt": analisis_gpt,
+                "justificacion_gpt": conclusion_gpt,
                 "resultado_url": resultado_url,
                 "resultado_ml": resultado_ml,
                 "fecha_analisis": datetime.utcnow().isoformat() + 'Z'
@@ -217,7 +237,17 @@ async def consultar_modelo():
             collection.update_one({"_id": mensaje_encontrado["_id"]}, {"$set": nuevo_documento})
         else:
             collection.insert_one(nuevo_documento)
-
+    
+    resultado_final = {
+        "analisis_gpt": conclusion_gpt,
+        "analisis_smishguard": analisis_smishguard,
+        "enlace": enlace_retornado_vt,
+        "resultado_url": resultado_url,
+        "resultado_ml": resultado_ml,
+        "mensaje_analizado": mensaje,
+        "numero_celular": numero_celular,
+        "puntaje": puntaje_escalado
+    }
     return jsonify(resultado_final)
 
 
