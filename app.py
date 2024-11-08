@@ -144,12 +144,12 @@ async def consultar_modelo():
 
         response_json_gpt = await consultar_gpt()
 
-    valor_gpt = 0
-    if isinstance(response_json_gpt, dict) and 'Calificación' in response_json_gpt:
-        try:
-            valor_gpt = float(response_json_gpt.get("Calificación", 0))
-        except ValueError:
-            valor_gpt = 0  # Fallback to 0 if conversion fails
+    # Verificar que 'Calificación' es numérico; si no, asignar 0 por defecto
+    valor_gpt_raw = response_json_gpt.get("Calificación", 0)
+    if isinstance(valor_gpt_raw, (int, float)):
+        valor_gpt = float(valor_gpt_raw)
+    else:
+        valor_gpt = 0
 
     # Ajustar ponderaciones y calcular el puntaje ponderado
     ponderacion_ml = ponderacion_gpt = ponderacion_vt = 0.0
@@ -244,8 +244,6 @@ async def consultar_modelo():
         "puntaje": puntaje_escalado
     }
     return jsonify(resultado_final)
-
-
 # Función para convertir ObjectId a string en todos los documentos
 def parse_json(doc):
     """
