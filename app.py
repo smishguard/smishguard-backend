@@ -45,11 +45,7 @@ async def consultar_modelo():
 
     # Conexión a la colección Mensajes
     collection = db['Mensajes']
-
-    # Buscar el mensaje en la base de datos
     mensaje_encontrado = collection.find_one({"contenido": mensaje})
-
-    # Calcular la fecha de hace un mes
     hace_un_mes = datetime.utcnow() - timedelta(days=30)
 
     if mensaje_encontrado:
@@ -78,8 +74,6 @@ async def consultar_modelo():
     # Detectar URLs en el mensaje
     urls = re.findall(r'\b(?:https?://)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?\b', mensaje)
     payload_vt = {"url": urls[0]} if urls else {}
-
-    # Timeout en segundos
     timeout_duration = 15
 
     async with aiohttp.ClientSession() as session:
@@ -121,59 +115,63 @@ async def consultar_modelo():
         enlace_retornado_vt = response_json_vt['url']
         resultado_url = "Malicioso" if valor_vt == 1 else "Seguro"
 
-    valor_ml = 0
-    resultado_ml = "No disponible"
-    if isinstance(response_json_ml, dict) and 'prediction' in response_json_ml:
-        valor_ml = 1 if response_json_ml['prediction'] == 'spam' else 0
-        resultado_ml = "Spam" if valor_ml == 1 else "No Spam"
-
-    # Preparar payload para el servicio GPT con solo el mensaje
-    payload_gpt = {
-        "mensaje": mensaje
-    }
-
-    async with aiohttp.ClientSession() as session:
-        async def consultar_gpt():
-            try:
-                async with session.post(url_microservicio_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
-                    return await response.json()
-            except asyncio.TimeoutError:
-                return {"error": "Timeout en GPT"}
-            except aiohttp.ClientError:
-                return {"error": "Error en GPT"}
-
-        response_json_gpt = await consultar_gpt()
-
-    # Verificar que 'Calificación' es numérico; si no, asignar 0 por defecto
-    valor_gpt_raw = response_json_gpt.get("Calificación", 0)
-    if isinstance(valor_gpt_raw, (int, float)):
-        valor_gpt = float(valor_gpt_raw)
+    # Verificar si valor_vt es 1, en cuyo caso establecer puntaje_escalado a 10 directamente
+    if valor_vt == 1:
+        puntaje_escalado = 10
     else:
-        valor_gpt = 0
+        valor_ml = 0
+        resultado_ml = "No disponible"
+        if isinstance(response_json_ml, dict) and 'prediction' in response_json_ml:
+            valor_ml = 1 if response_json_ml['prediction'] == 'spam' else 0
+            resultado_ml = "Spam" if valor_ml == 1 else "No Spam"
 
-    # Ajustar ponderaciones y calcular el puntaje ponderado
-    ponderacion_ml = ponderacion_gpt = ponderacion_vt = 0.0
+        # Preparar payload para el servicio GPT con solo el mensaje
+        payload_gpt = {
+            "mensaje": mensaje
+        }
 
-    if not urls:
-        ponderacion_ml = 0.60
-        ponderacion_gpt = 0.40
-    elif "error" in response_json_gpt:
-        ponderacion_ml = 0.70
-        ponderacion_vt = 0.30
-    elif "error" in response_json_ml:
-        ponderacion_gpt = 0.70
-        ponderacion_vt = 0.30
-    elif "error" in response_json_vt:
-        ponderacion_ml = 0.60
-        ponderacion_gpt = 0.40
-    else:
-        ponderacion_vt = 0.35
-        ponderacion_ml = 0.40
-        ponderacion_gpt = 0.25
+        async with aiohttp.ClientSession() as session:
+            async def consultar_gpt():
+                try:
+                    async with session.post(url_microservicio_gpt, headers=headers, json=payload_gpt, timeout=timeout_duration) as response:
+                        return await response.json()
+                except asyncio.TimeoutError:
+                    return {"error": "Timeout en GPT"}
+                except aiohttp.ClientError:
+                    return {"error": "Error en GPT"}
 
-    # Calcular el puntaje total
-    puntaje_total = (float(valor_vt) * ponderacion_vt) + (float(valor_ml) * ponderacion_ml) + (float(valor_gpt) * ponderacion_gpt)
-    puntaje_escalado = round(1 + (puntaje_total * 9))
+            response_json_gpt = await consultar_gpt()
+
+        # Verificar que 'Calificación' es numérico; si no, asignar 0 por defecto
+        valor_gpt_raw = response_json_gpt.get("Calificación", 0)
+        if isinstance(valor_gpt_raw, (int, float)):
+            valor_gpt = float(valor_gpt_raw)
+        else:
+            valor_gpt = 0
+
+        # Ajustar ponderaciones y calcular el puntaje ponderado
+        ponderacion_ml = ponderacion_gpt = ponderacion_vt = 0.0
+
+        if not urls:
+            ponderacion_ml = 0.60
+            ponderacion_gpt = 0.40
+        elif "error" in response_json_gpt:
+            ponderacion_ml = 0.70
+            ponderacion_vt = 0.30
+        elif "error" in response_json_ml:
+            ponderacion_gpt = 0.70
+            ponderacion_vt = 0.30
+        elif "error" in response_json_vt:
+            ponderacion_ml = 0.60
+            ponderacion_gpt = 0.40
+        else:
+            ponderacion_vt = 0.35
+            ponderacion_ml = 0.40
+            ponderacion_gpt = 0.25
+
+        # Calcular el puntaje total
+        puntaje_total = (float(valor_vt) * ponderacion_vt) + (float(valor_ml) * ponderacion_ml) + (float(valor_gpt) * ponderacion_gpt)
+        puntaje_escalado = round(1 + (puntaje_total * 9))
 
     # Clasificar según el puntaje escalado
     if puntaje_escalado <= 3:
@@ -232,7 +230,7 @@ async def consultar_modelo():
             collection.update_one({"_id": mensaje_encontrado["_id"]}, {"$set": nuevo_documento})
         else:
             collection.insert_one(nuevo_documento)
-    
+
     resultado_final = {
         "analisis_gpt": conclusion_gpt,
         "analisis_smishguard": analisis_smishguard,
@@ -244,6 +242,7 @@ async def consultar_modelo():
         "puntaje": puntaje_escalado
     }
     return jsonify(resultado_final)
+
 # Función para convertir ObjectId a string en todos los documentos
 def parse_json(doc):
     """
