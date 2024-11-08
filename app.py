@@ -146,32 +146,33 @@ async def consultar_modelo():
 
     valor_gpt = 0
     if isinstance(response_json_gpt, dict) and 'Calificación' in response_json_gpt:
-        valor_gpt = response_json_gpt.get("Calificación", 0)
+        try:
+            valor_gpt = float(response_json_gpt.get("Calificación", 0))
+        except ValueError:
+            valor_gpt = 0  # Fallback to 0 if conversion fails
 
     # Ajustar ponderaciones y calcular el puntaje ponderado
+    ponderacion_ml = ponderacion_gpt = ponderacion_vt = 0.0
+
     if not urls:
         ponderacion_ml = 0.60
         ponderacion_gpt = 0.40
-        ponderacion_vt = 0.0
     elif "error" in response_json_gpt:
         ponderacion_ml = 0.70
         ponderacion_vt = 0.30
-        ponderacion_gpt = 0.0
     elif "error" in response_json_ml:
         ponderacion_gpt = 0.70
         ponderacion_vt = 0.30
-        ponderacion_ml = 0.0
     elif "error" in response_json_vt:
         ponderacion_ml = 0.60
         ponderacion_gpt = 0.40
-        ponderacion_vt = 0.0
     else:
         ponderacion_vt = 0.35
         ponderacion_ml = 0.40
         ponderacion_gpt = 0.25
 
     # Calcular el puntaje total
-    puntaje_total = (valor_vt * ponderacion_vt) + (valor_ml * ponderacion_ml) + (valor_gpt * ponderacion_gpt)
+    puntaje_total = (float(valor_vt) * ponderacion_vt) + (float(valor_ml) * ponderacion_ml) + (float(valor_gpt) * ponderacion_gpt)
     puntaje_escalado = round(1 + (puntaje_total * 9))
 
     # Clasificar según el puntaje escalado
@@ -207,9 +208,8 @@ async def consultar_modelo():
     except requests.RequestException:
         response_json_gpt = {"error": "Error en GPT"}
 
-    conclusion_gpt = "No disponible"
-    if isinstance(response_json_gpt, dict) and 'conclusion' in response_json_gpt:
-        conclusion_gpt = response_json_gpt.get("conclusion", "No disponible")
+    conclusion_gpt = response_json_gpt.get("conclusion", "No disponible") if isinstance(response_json_gpt, dict) else "No disponible"
+
     # Si se realizó un análisis nuevo o es la primera vez, guardar o actualizar en la base de datos
     if not any("error" in res for res in [response_json_gpt, response_json_ml]):
         nuevo_documento = {
