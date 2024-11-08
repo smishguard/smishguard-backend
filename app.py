@@ -41,13 +41,13 @@ def ping():
 async def consultar_modelo():
     data = request.get_json()
     mensaje = data.get('mensaje', '')
-    numero_celular = data.get('numero_celular', '')
+    numero_celular = data.get('numero_celular', None)
 
     # Conexión a la colección Mensajes
     collection = db['Mensajes']
 
     # Buscar el mensaje en la base de datos
-    mensaje_encontrado = collection.find_one({"contenido": mensaje, "numero_celular": numero_celular})
+    mensaje_encontrado = collection.find_one({"contenido": mensaje})
 
     # Calcular la fecha de hace un mes
     hace_un_mes = datetime.utcnow() - timedelta(days=30)
@@ -454,10 +454,10 @@ def historial_analisis_usuarios():
     try:
         data = request.get_json()
         mensaje = data.get('mensaje', '')
-        url = data.get('url', '')
+        url = data.get('url', None)
         analisis = data.get('analisis', {})
         correo = data.get('correo', '')
-        numero_celular = data.get('numero_celular', '')  # Nuevo campo
+        numero_celular = data.get('numero_celular', None)  # Nuevo campo
 
         # Verificar que todos los campos requeridos están presentes
         if not mensaje or not url or not analisis or not correo or not numero_celular:
