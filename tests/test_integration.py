@@ -110,3 +110,44 @@ def test_numeros_bloqueados(mock_db, client):
     assert response_consultar.status_code == 200
     assert len(response_consultar.json["numeros"]) > 0
     assert response_consultar.json["numeros"][0]["numero"] == "123456789"
+
+# Prueba de integración para el endpoint de mensaje aleatorio
+def test_mensaje_aleatorio(mock_db, client):
+    # Insertar varios mensajes en la base de datos simulada
+    mock_db['Mensajes'].insert_many([
+        {"contenido": "Mensaje 1"},
+        {"contenido": "Mensaje 2"},
+        {"contenido": "Mensaje 3"}
+    ])
+
+    # Llamar al endpoint de mensaje aleatorio
+    response = client.get("/mensaje-aleatorio")
+    assert response.status_code == 200
+    assert "mensaje" in response.json
+    assert "contenido" in response.json["mensaje"]
+
+# Prueba de integración para el endpoint de estadísticas
+def test_obtener_estadisticas(mock_db, client):
+    # Insertar datos en la colección Mensajes
+    mock_db['Mensajes'].insert_many([
+        {"analisis": {"nivel_peligro": "Seguro"}},
+        {"analisis": {"nivel_peligro": "Sospechoso"}},
+        {"analisis": {"nivel_peligro": "Peligroso"}},
+        {"analisis": {"nivel_peligro": "Seguro"}}
+    ])
+    # Insertar datos en la colección MensajesParaPublicar
+    mock_db['MensajesParaPublicar'].insert_many([
+        {"publicado": True},
+        {"publicado": False}
+    ])
+
+    # Llamar al endpoint de estadísticas
+    response = client.get("/estadisticas")
+    assert response.status_code == 200
+    assert "mensajes" in response.json
+    assert "mensajes_para_publicar" in response.json
+    assert response.json["mensajes"]["seguros"] == 2
+    assert response.json["mensajes"]["sospechosos"] == 1
+    assert response.json["mensajes"]["peligrosos"] == 1
+    assert response.json["mensajes_para_publicar"]["publicados"] == 1
+    assert response.json["mensajes_para_publicar"]["no_publicados"] == 1

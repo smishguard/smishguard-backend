@@ -77,6 +77,7 @@ def test_actualizar_publicado(client):
     }
     response_guardar = client.post('/guardar-mensaje-para-publicar', json=data)
     assert response_guardar.status_code == 201
+    assert "documento" in response_guardar.json
     mensaje_id = response_guardar.json["documento"]["_id"]
 
     # Ahora, actualiza el campo `publicado` del mensaje guardado
@@ -99,9 +100,62 @@ def test_eliminar_mensaje_para_publicar(client):
     }
     response_guardar = client.post('/guardar-mensaje-para-publicar', json=data)
     assert response_guardar.status_code == 201
+    assert "documento" in response_guardar.json
     mensaje_id = response_guardar.json["documento"]["_id"]
 
     # Ahora, elimina el mensaje guardado
     response_eliminar = client.delete(f'/eliminar-mensaje-para-publicar/{mensaje_id}')
     assert response_eliminar.status_code == 200
     assert response_eliminar.json["mensaje"] == "El mensaje ha sido eliminado exitosamente."
+
+def test_mensaje_aleatorio(client):
+    """Prueba el endpoint /mensaje-aleatorio para obtener un mensaje aleatorio"""
+    # Asegura que hay al menos un mensaje en la base de datos antes de la prueba
+    client.post('/guardar-mensaje-para-publicar', json={
+        "contenido": "Mensaje aleatorio de prueba",
+        "url": "http://example.com",
+        "analisis": {
+            "calificacion_gpt": 3,
+            "calificacion_ml": 0,
+            "nivel_peligro": "Seguro"
+        },
+        "publicado": False
+    })
+    
+    response = client.get('/mensaje-aleatorio')
+    assert response.status_code == 200
+    assert "mensaje" in response.json
+    assert "contenido" in response.json["mensaje"]
+
+def test_obtener_estadisticas(client):
+    """Prueba el endpoint /estadisticas para obtener estadísticas generales"""
+    # Inserta algunos mensajes de ejemplo antes de obtener estadísticas
+    client.post('/guardar-mensaje-para-publicar', json={
+        "contenido": "Mensaje seguro",
+        "url": "http://example.com",
+        "analisis": {
+            "calificacion_gpt": 3,
+            "calificacion_ml": 0,
+            "nivel_peligro": "Seguro"
+        },
+        "publicado": False
+    })
+    client.post('/guardar-mensaje-para-publicar', json={
+        "contenido": "Mensaje peligroso",
+        "url": "http://example.com",
+        "analisis": {
+            "calificacion_gpt": 9,
+            "calificacion_ml": 1,
+            "nivel_peligro": "Peligroso"
+        },
+        "publicado": True
+    })
+    
+    response = client.get('/estadisticas')
+    assert response.status_code == 200
+    assert "mensajes" in response.json
+    assert "mensajes_para_publicar" in response.json
+    assert response.json["mensajes"]["seguros"] >= 1
+    assert response.json["mensajes"]["peligrosos"] >= 1
+    assert response.json["mensajes_para_publicar"]["publicados"] >= 1
+    assert response.json["mensajes_para_publicar"]["no_publicados"] >= 1

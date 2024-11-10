@@ -2,11 +2,11 @@ from locust import HttpUser, TaskSet, task, between
 
 class UserBehavior(TaskSet):
     
-    @task
+    @task(1)
     def ping(self):
         self.client.get("/ping")
     
-    @task
+    @task(3)
     def consultar_modelo(self):
         data = {
             "mensaje": "Este es un mensaje de prueba",
@@ -14,7 +14,7 @@ class UserBehavior(TaskSet):
         }
         self.client.post("/consultar-modelo", json=data)
     
-    @task
+    @task(2)
     def guardar_mensaje_para_publicar(self):
         data = {
             "contenido": "Contenido de prueba",
@@ -28,16 +28,24 @@ class UserBehavior(TaskSet):
         }
         self.client.post("/guardar-mensaje-para-publicar", json=data)
 
-    @task
+    @task(2)
     def obtener_mensajes_para_publicar(self):
         self.client.get("/mensajes-para-publicar")
     
-    @task
+    @task(1)
     def publicar_tweet(self):
         data = {
             "mensaje": "Este es un tweet de prueba sin enlace"
         }
         self.client.post("/publicar-tweet", json=data)
+
+    @task(1)
+    def mensaje_aleatorio(self):
+        self.client.get("/mensaje-aleatorio")
+
+    @task(1)
+    def obtener_estadisticas(self):
+        self.client.get("/estadisticas")
 
 class WebsiteUser(HttpUser):
     tasks = [UserBehavior]

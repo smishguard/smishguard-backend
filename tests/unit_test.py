@@ -2,8 +2,8 @@ import pytest
 import mongomock
 from app import app
 from unittest.mock import patch, MagicMock
-import asyncio
 from datetime import datetime, timedelta
+import asyncio
 
 
 @pytest.fixture
@@ -114,3 +114,34 @@ def test_eliminar_numero_bloqueado(mock_db, client):
     response = client.delete('/numeros-bloqueados/test@test.com/123456789')
     assert response.status_code == 200
     assert response.json["mensaje"] == "Número bloqueado eliminado exitosamente."
+
+def test_mensaje_aleatorio(mock_db, client):
+    mock_db['Mensajes'].insert_many([
+        {"contenido": "Mensaje 1"},
+        {"contenido": "Mensaje 2"}
+    ])
+    response = client.get('/mensaje-aleatorio')
+    assert response.status_code == 200
+    assert "mensaje" in response.json
+    assert "contenido" in response.json["mensaje"]
+
+def test_obtener_estadisticas(mock_db, client):
+    mock_db['Mensajes'].insert_many([
+        {"analisis": {"nivel_peligro": "Seguro"}},
+        {"analisis": {"nivel_peligro": "Sospechoso"}},
+        {"analisis": {"nivel_peligro": "Peligroso"}},
+        {"analisis": {"nivel_peligro": "Seguro"}}
+    ])
+    mock_db['MensajesParaPublicar'].insert_many([
+        {"publicado": True},
+        {"publicado": False}
+    ])
+    response = client.get('/estadisticas')
+    assert response.status_code == 200
+    assert "mensajes" in response.json
+    assert "mensajes_para_publicar" in response.json
+    assert response.json["mensajes"]["seguros"] == 2
+    assert response.json["mensajes"]["sospechosos"] == 1
+    assert response.json["mensajes"]["peligrosos"] == 1
+    assert response.json["mensajes_para_publicar"]["publicados"] == 1
+    assert response.json["mensajes_para_publicar"]["no_publicados"] == 1
