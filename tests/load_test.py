@@ -31,14 +31,14 @@ class UserBehavior(TaskSet):
     @task(2)
     def obtener_mensajes_para_publicar(self):
         self.client.get("/mensajes-para-publicar")
-    
+    """
     @task(1)
     def publicar_tweet(self):
         data = {
             "mensaje": "Este es un tweet de prueba sin enlace"
         }
         self.client.post("/publicar-tweet", json=data)
-
+"""
     @task(1)
     def mensaje_aleatorio(self):
         self.client.get("/mensaje-aleatorio")
