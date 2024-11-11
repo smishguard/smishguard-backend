@@ -56,9 +56,8 @@ def test_eliminar_mensaje(mock_db, client):
     mensaje = mock_db['MensajesParaPublicar'].find_one({"_id": mensaje_id})
     assert mensaje is None
 
-# Prueba de integración para el endpoint de /consultar-modelo (incluye manejo de servicios externos simulados)
-@pytest.mark.asyncio
-async def test_consultar_modelo(mock_db, client):
+# Prueba de integración para el endpoint de /consultar-modelo
+def test_consultar_modelo(mock_db, client):
     # Inserta un mensaje en la base de datos para que sea encontrado
     mock_db['Mensajes'].insert_one({
         "contenido": "Mensaje para analizar",
@@ -77,7 +76,7 @@ async def test_consultar_modelo(mock_db, client):
     data = {"mensaje": "Mensaje para analizar", "numero_celular": "123456789"}
     
     # Simular una solicitud POST al endpoint /consultar-modelo
-    response = await client.post("/consultar-modelo", json=data)
+    response = client.post("/consultar-modelo", json=data)
     assert response.status_code == 200
     assert response.json["analisis_gpt"] == "Sample GPT analysis"
     assert response.json["analisis_smishguard"] == "Seguro"
