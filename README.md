@@ -90,7 +90,8 @@ Las pruebas de la API confirmaron que todos los endpoints funcionan correctament
 ### Pruebas de Carga
 Se realizaron pruebas de carga utilizando Locust para simular múltiples usuarios concurrentes accediendo a la API. Los resultados mostraron que el servicio puede manejar la carga esperada sin tiempos de respuesta excesivos.
 
-![Resultado de Pruebas de Carga](tests/Prueba_Carga_Back.html)
+![Resultado de Pruebas de Carga](tests/Carga1.png)
+![Resultado de Pruebas de Carga](tests/Carga2.png)
 
 ## Instalación y Ejecución Local
 
