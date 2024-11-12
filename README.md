@@ -417,6 +417,11 @@ python app.py
 
 La API estará disponible en `http://127.0.0.1:5000`.
 
+## Despliegue en Render
+Este servicio está desplegado en Render. Al realizar una solicitud a cualquiera de los endpoints documentados, asegúrate de usar la URL de despliegue proporcionada por Render.
+
+La API está disponible en: https://smishguard-api-gateway.onrender.com.
+
 ## Licencia
 
 Este proyecto está licenciado bajo la MIT License.
