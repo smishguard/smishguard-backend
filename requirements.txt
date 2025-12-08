@@ -13,3 +13,4 @@ aiohttp
 flask-cors
 pymongo[srv]
 python-dotenv
+urllib3>=2.6.0 # not directly required, pinned by Snyk to avoid a vulnerability
